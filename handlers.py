@@ -33,25 +33,32 @@ async def start_survey_handler(msg: Message, state: FSMContext):
         return await msg.answer(text=text.surveys_limit_reached)
 
     current_state = await state.get_state()
+
     if current_state not in [SurveyState.started.state, SurveyState.editing.state]:
         question_number = 1
         await state.set_state(SurveyState.started)
-        await state.update_data(last_question_number=question_number, survey_answers={})
         question = questions.get(question_number)
-        await msg.answer(text=question)
+        send_question = await msg.answer(text=question)
+        await state.update_data(last_question_number=question_number, survey_answers={}, message_to_delete=send_question.message_id)
 
 
 @router.message(StateFilter(SurveyState.started))
-async def question_answer_handler(msg: Message, state: FSMContext):
+async def question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
     answer = msg.text
     state_data = await state.get_data()
+    await msg.delete()
+    if 'message_to_delete' in state_data:
+        message_id = state_data.pop('message_to_delete')
+        await bot.delete_message(chat_id=msg.chat.id, message_id=message_id)
     current_question_number, survey_answers = state_data.get('last_question_number'), state_data.get('survey_answers')
     survey_answers.update({current_question_number: answer})
+
     if current_question_number != len(questions):
         current_question_number += 1
-        await state.update_data(last_question_number=current_question_number, survey_answers=survey_answers)
         question = questions.get(current_question_number)
-        await msg.answer(text=question)
+        send_question = await msg.answer(text=question)
+        await state.update_data(last_question_number=current_question_number, survey_answers=survey_answers,
+                                message_to_delete=send_question.message_id)
     else:
         message = generate_survey_confirm_text(questions, survey_answers)
 
@@ -84,11 +91,11 @@ async def survey_edit_handler(callback: CallbackQuery, state: FSMContext, bot: B
 @router.callback_query(StateFilter(SurveyState.editing), F.data.startswith('answeredit_'))
 async def edit_button_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     question_number = callback.data.split('_')[-1]
-    await state.update_data(edited_question_number=question_number)
     question = questions.get(int(question_number))
     await callback.answer()
     await callback.message.delete()
-    await bot.send_message(chat_id=callback.message.chat.id, text=question)
+    send_question = await bot.send_message(chat_id=callback.message.chat.id, text=question)
+    await state.update_data(edited_question_number=question_number, message_to_delete=send_question.message_id)
 
 
 @router.message(StateFilter(SurveyState.editing))
@@ -96,6 +103,9 @@ async def question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
     answer = msg.text
     await msg.delete()
     state_data = await state.get_data()
+    if 'message_to_delete' in state_data:
+        message_id = state_data.pop('message_to_delete')
+        await bot.delete_message(chat_id=msg.chat.id, message_id=message_id)
     edit_msg_id = state_data.get('edited_msg_id')
     edited_question_number, survey_answers = state_data.get('edited_question_number'), state_data.get('survey_answers')
     survey_answers.update({int(edited_question_number): answer})
