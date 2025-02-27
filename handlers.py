@@ -19,24 +19,26 @@ questions = {1: 'Как зовут молодоженов?', 2: 'Сколько 
 
 
 class SurveyState(StatesGroup):
+    chat_started = State()
     survey_started = State()
     survey_editing = State()
 
 
 @router.message(Command('start'))
-async def start_handler(msg: Message):
+async def start_handler(msg: Message, state: FSMContext):
     message = format_message(text.welcome_message, username=msg.from_user.username)
+    await state.set_state(SurveyState.chat_started)
     await msg.answer(text=message, reply_markup=main_menu)
 
 
-@router.message(F.text == f'{chr(0x1F4CB)} Опрос')
+@router.message(StateFilter(SurveyState.chat_started.state), F.text == f'{chr(0x1F4CB)} Опрос')
 async def start_survey_handler(msg: Message, state: FSMContext):
     await msg.delete()
     if not await check_if_user_can_start_survey(msg.from_user.id):
         return await msg.answer(text=text.surveys_limit_reached)
 
     current_state = await state.get_state()
-
+    print(current_state)
     if current_state not in [SurveyState.survey_started.state, SurveyState.survey_editing.state]:
         question_number = 1
         await state.set_state(SurveyState.survey_started)
@@ -74,6 +76,7 @@ async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot:
     state_data = await state.get_data()
     await save_survey_to_db(user_id, state_data.get('survey_answers'), questions)
     await state.clear()
+    await state.set_state(SurveyState.chat_started)
     await callback.answer()
     await callback.message.delete()
     await bot.send_message(chat_id=callback.message.chat.id, text=text.survey_finished_message)
