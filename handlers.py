@@ -103,7 +103,7 @@ async def survey_request_handler(callback: CallbackQuery, state: FSMContext, bot
         await bot.send_message(chat_id=callback.message.chat.id, text=text.user_dont_want_survey)
 
 
-@router.message(StateFilter(SurveyState.ready_to_survey.state), F.text == f'{chr(0x1F4CB)} Опрос')
+@router.message(F.text == f'{chr(0x1F4CB)} Опрос')
 async def start_survey_handler(msg: Message, state: FSMContext):
     await msg.delete()
     if not await check_if_user_can_start_survey(msg.from_user.id):
@@ -111,7 +111,7 @@ async def start_survey_handler(msg: Message, state: FSMContext):
 
     current_state = await state.get_state()
 
-    if current_state not in [SurveyState.survey_started.state, SurveyState.survey_editing.state]:
+    if current_state in [SurveyState.ready_to_survey.state]:
         question_number = 1
         await state.set_state(SurveyState.survey_started)
         question = questions.get(question_number)
