@@ -8,7 +8,8 @@ from aiogram import F
 import text
 from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, generate_event_type_menu,\
     survey_request_menu
-from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey
+from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
+    notify_admin_about_new_client
 from utils import format_message
 
 router = Router()
@@ -78,6 +79,7 @@ async def event_type_handler(callback: CallbackQuery, state: FSMContext, bot: Bo
     user_data = state_data.get('user_data')
     user_data.update({'Мероприятие': event_type})
     await state.update_data(user_data=user_data)
+    await notify_admin_about_new_client(user_data, bot)
 
     if event_type.lower() == 'другое':
         await bot.send_message(chat_id=callback.message.chat.id, text=text.other_event_reply)

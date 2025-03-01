@@ -1,7 +1,17 @@
 import os
 
+from aiogram import Bot
+
 from database import get_collection, SURVEYS
 from datetime import datetime
+
+
+async def notify_admin_about_new_client(user_data, bot: Bot):
+    admin_id = os.getenv('ADMIN_ID')
+    message = f'У вас новый клиент! \n'
+    for key, value in user_data.items():
+        message += f'{key}: {value} \n'
+    await bot.send_message(chat_id=int(admin_id), text=message)
 
 
 async def check_if_user_can_start_survey(user_id: int):
