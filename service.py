@@ -6,6 +6,23 @@ from database import get_collection, SURVEYS
 from datetime import datetime
 
 
+survey_questions = {
+    'Cвадьба':
+        {1: 'Как зовут молодоженов?', 2: 'Сколько лет?', 3: 'Как познакомились?',
+         4: 'Какие увлечения/хобби?', 5: 'Любимый цвет?', 6: 'Любимые исполнители?',
+         7: 'Предпочтительный стиль проведения мероприятия?', 8: 'Любимое время года?',
+         9: 'Любимая марка авто?'},
+    'День рождения':
+        {1: 'Как зовут именинника?', 2: 'Cколько исполняется лет?', 3: 'Любимый цвет?', 4: 'Сфера деятельности?',
+         5: 'Любимое хобби?', 6: 'Любимый исполнитель?'},
+    'Корпоратив':
+        {1: 'Название компании?', 2: 'Сфера деятельности?', 3: 'Количество сотрудников?', 4: 'Формат Корпоратива?',
+         5: 'Тематический или деловой корпоратив?'},
+    'Конференция':
+        {1: 'Название компании?', 2: 'Тема конференции?', 3: 'Количество человек?'}
+}
+
+
 async def notify_admin_about_new_client(user_data, bot: Bot):
     admin_id = os.getenv('ADMIN_ID')
     message = f'У вас новый клиент! \n'
@@ -37,3 +54,16 @@ async def save_survey_to_db(user_id, survey_data, questions, user_data):
         answers.update({question: answer})
     data = {'user_id': user_id, **user_data, 'answers': answers, 'created_at': current_date}
     collection.insert_one(data)
+
+
+def get_survey_questions(event_type: str):
+    return survey_questions.get(event_type, {})
+
+
+def get_next_question(event_type: str, question_number: int):
+    questions = get_survey_questions(event_type)
+    return questions.get(question_number)
+
+
+def get_survey_question_number(event_type: str):
+    return len(survey_questions.get(event_type, {}))

@@ -9,7 +9,7 @@ import text
 from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, generate_event_type_menu,\
     survey_request_menu
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
-    notify_admin_about_new_client
+    notify_admin_about_new_client, get_next_question, get_survey_question_number, get_survey_questions
 from utils import format_message
 
 router = Router()
@@ -18,11 +18,6 @@ chat_questions = {1: 'Как тебя зовут?', 2: 'Номер телефо�
 event_types = ['Cвадьба', 'День рождения', 'Корпоратив', 'Конференция', 'Другое']
 
 user_data_map = {1: 'Имя', 2: 'Номер телефона'}
-
-questions = {1: 'Как зовут молодоженов?', 2: 'Сколько лет?', 3: 'Как познакомились?',
-             4: 'Какие увлечения/хобби?', 5: 'Любимый цвет?', 6: 'Любимые исполнители?',
-             7: 'Предпочтительный стиль проведения мероприятия?', 8: 'Любимое время года?',
-             9: 'Любимая марка авто?'}
 
 
 class SurveyState(StatesGroup):
@@ -94,7 +89,9 @@ async def survey_request_handler(callback: CallbackQuery, state: FSMContext, bot
     want_to_start_survey = callback.data.split('_')[-1]
     if want_to_start_survey == 'yes':
         question_number = 1
-        question = questions.get(question_number)
+        state_data = await state.get_data()
+        event_type = state_data.get('user_data').get('Мероприятие')
+        question = get_next_question(event_type, question_number)
 
         await bot.send_message(chat_id=callback.message.chat.id, text=text.user_want_survey)
         await state.set_state(SurveyState.survey_started.state)
@@ -108,15 +105,17 @@ async def survey_request_handler(callback: CallbackQuery, state: FSMContext, bot
 @router.message(F.text == f'{chr(0x1F4CB)} Опрос')
 async def start_survey_handler(msg: Message, state: FSMContext):
     await msg.delete()
-    if not await check_if_user_can_start_survey(msg.from_user.id):
-        return await msg.answer(text=text.surveys_limit_reached)
-
     current_state = await state.get_state()
 
     if current_state in [SurveyState.ready_to_survey.state]:
+        if not await check_if_user_can_start_survey(msg.from_user.id):
+            return await msg.answer(text=text.surveys_limit_reached)
+
         question_number = 1
         await state.set_state(SurveyState.survey_started)
-        question = questions.get(question_number)
+        state_data = await state.get_data()
+        event_type = state_data.get('user_data').get('Мероприятие')
+        question = get_next_question(event_type, question_number)
         send_question = await msg.answer(text=question)
         await state.update_data(last_question_number=question_number, survey_answers={}, message_to_delete=send_question.message_id)
 
@@ -125,6 +124,7 @@ async def start_survey_handler(msg: Message, state: FSMContext):
 async def question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
     answer = msg.text
     state_data = await state.get_data()
+    event_type = state_data.get('user_data').get('Мероприятие')
     await msg.delete()
     if 'message_to_delete' in state_data:
         message_id = state_data.pop('message_to_delete')
@@ -132,13 +132,14 @@ async def question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
     current_question_number, survey_answers = state_data.get('last_question_number'), state_data.get('survey_answers')
     survey_answers.update({current_question_number: answer})
 
-    if current_question_number != len(questions):
+    if current_question_number != get_survey_question_number(event_type):
         current_question_number += 1
-        question = questions.get(current_question_number)
+        question = get_next_question(event_type, current_question_number)
         send_question = await msg.answer(text=question)
         await state.update_data(last_question_number=current_question_number, survey_answers=survey_answers,
                                 message_to_delete=send_question.message_id)
     else:
+        questions = get_survey_questions(event_type)
         message = generate_survey_confirm_text(questions, survey_answers)
 
         await msg.answer(message, reply_markup=survey_confirm_menu, parse_mode='Markdown')
@@ -148,6 +149,7 @@ async def question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
 async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_id = callback.from_user.id
     state_data = await state.get_data()
+    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'))
     await save_survey_to_db(user_id, state_data.get('survey_answers'), questions, state_data.get('user_data'))
     await state.set_state(SurveyState.ready_to_survey)
     await callback.answer()
@@ -160,6 +162,8 @@ async def survey_edit_handler(callback: CallbackQuery, state: FSMContext, bot: B
     message_id = callback.message.message_id
     await state.set_state(SurveyState.survey_editing)
     await state.update_data(edited_msg_id=message_id)
+    state_data = await state.get_data()
+    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'))
     message = 'Выберите какой вопрос вы хотите отредактировать: \n' + '\n'.join(f'{q_number}. {question}'
                                                                                 for q_number, question in questions.items())
     await callback.answer()
@@ -170,6 +174,8 @@ async def survey_edit_handler(callback: CallbackQuery, state: FSMContext, bot: B
 @router.callback_query(StateFilter(SurveyState.survey_editing), F.data.startswith('answeredit_'))
 async def edit_button_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     question_number = callback.data.split('_')[-1]
+    state_data = await state.get_data()
+    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'))
     question = questions.get(int(question_number))
     await callback.answer()
     await callback.message.delete()
@@ -186,6 +192,7 @@ async def question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
         message_id = state_data.pop('message_to_delete')
         await bot.delete_message(chat_id=msg.chat.id, message_id=message_id)
     edit_msg_id = state_data.get('edited_msg_id')
+    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'))
     edited_question_number, survey_answers = state_data.get('edited_question_number'), state_data.get('survey_answers')
     survey_answers.update({int(edited_question_number): answer})
     await state.set_state(SurveyState.survey_started)
