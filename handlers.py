@@ -9,7 +9,8 @@ import text
 from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, generate_event_type_menu,\
     survey_request_menu
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
-    notify_admin_about_new_client, get_next_question, get_survey_question_number, get_survey_questions
+    notify_admin_about_new_client, get_next_question, get_survey_question_number, get_survey_questions, \
+    send_next_question
 from utils import format_message
 
 router = Router()
@@ -19,6 +20,7 @@ event_types = ['Cвадьба', 'День рождения', 'Корпорати
 
 user_data_map = {1: 'Имя', 2: 'Номер телефона'}
 
+#TODO: add handling when usere type text answer instead of click answer button, fix error when typing special symbols([])
 
 class SurveyState(StatesGroup):
     chat_started = State()
@@ -87,23 +89,24 @@ async def event_type_handler(callback: CallbackQuery, state: FSMContext, bot: Bo
 async def survey_request_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.delete()
     want_to_start_survey = callback.data.split('_')[-1]
+    chat_id = callback.message.chat.id
     if want_to_start_survey == 'yes':
         question_number = 1
         state_data = await state.get_data()
         event_type = state_data.get('user_data').get('Мероприятие')
-        question = get_next_question(event_type, question_number)
 
         await bot.send_message(chat_id=callback.message.chat.id, text=text.user_want_survey)
         await state.set_state(SurveyState.survey_started.state)
-        send_question = await bot.send_message(chat_id=callback.message.chat.id, text=question)
+        question_message_id = await send_next_question(event_type=event_type, question_number=question_number,
+                                                       chat_id=chat_id, bot=bot)
         await state.update_data(last_question_number=question_number, survey_answers={},
-                                message_to_delete=send_question.message_id)
+                                message_to_delete=question_message_id)
     else:
-        await bot.send_message(chat_id=callback.message.chat.id, text=text.user_dont_want_survey)
+        await bot.send_message(chat_id=chat_id, text=text.user_dont_want_survey)
 
 
 @router.message(F.text == f'{chr(0x1F4CB)} Опрос')
-async def start_survey_handler(msg: Message, state: FSMContext):
+async def start_survey_handler(msg: Message, state: FSMContext, bot: Bot):
     await msg.delete()
     current_state = await state.get_state()
 
@@ -115,41 +118,48 @@ async def start_survey_handler(msg: Message, state: FSMContext):
         await state.set_state(SurveyState.survey_started)
         state_data = await state.get_data()
         event_type = state_data.get('user_data').get('Мероприятие')
-        question = get_next_question(event_type, question_number)
-        send_question = await msg.answer(text=question)
-        await state.update_data(last_question_number=question_number, survey_answers={}, message_to_delete=send_question.message_id)
+        question_message_id = await send_next_question(event_type=event_type, question_number=question_number,
+                                                       chat_id=msg.chat.id, bot=bot)
+        await state.update_data(last_question_number=question_number, survey_answers={},
+                                message_to_delete=question_message_id)
 
 
+@router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('answer_'))
 @router.message(StateFilter(SurveyState.survey_started))
-async def question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
-    answer = msg.text
+async def question_answer_handler(msg: Message | CallbackQuery, state: FSMContext, bot: Bot):
+    if isinstance(msg, Message):
+        answer = msg.text
+        chat_id = msg.chat.id
+        await msg.delete()
+    else:
+        answer = msg.data.split('_')[-1]
+        chat_id = msg.message.chat.id
     state_data = await state.get_data()
     event_type = state_data.get('user_data').get('Мероприятие')
-    await msg.delete()
     if 'message_to_delete' in state_data:
         message_id = state_data.pop('message_to_delete')
-        await bot.delete_message(chat_id=msg.chat.id, message_id=message_id)
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
     current_question_number, survey_answers = state_data.get('last_question_number'), state_data.get('survey_answers')
     survey_answers.update({current_question_number: answer})
 
     if current_question_number != get_survey_question_number(event_type):
         current_question_number += 1
-        question = get_next_question(event_type, current_question_number)
-        send_question = await msg.answer(text=question)
+        question_message_id = await send_next_question(event_type=event_type, question_number=current_question_number,
+                                                       chat_id=chat_id, bot=bot)
         await state.update_data(last_question_number=current_question_number, survey_answers=survey_answers,
-                                message_to_delete=send_question.message_id)
+                                message_to_delete=question_message_id)
     else:
-        questions = get_survey_questions(event_type)
+        questions = get_survey_questions(event_type, without_question_data=True)
         message = generate_survey_confirm_text(questions, survey_answers)
 
-        await msg.answer(message, reply_markup=survey_confirm_menu, parse_mode='Markdown')
+        await bot.send_message(chat_id=chat_id, text=message, reply_markup=survey_confirm_menu, parse_mode='Markdown')
 
 
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('surveymenu_confirm'))
 async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_id = callback.from_user.id
     state_data = await state.get_data()
-    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'))
+    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'), without_question_data=True)
     await save_survey_to_db(user_id, state_data.get('survey_answers'), questions, state_data.get('user_data'))
     await state.set_state(SurveyState.ready_to_survey)
     await callback.answer()
@@ -163,7 +173,7 @@ async def survey_edit_handler(callback: CallbackQuery, state: FSMContext, bot: B
     await state.set_state(SurveyState.survey_editing)
     await state.update_data(edited_msg_id=message_id)
     state_data = await state.get_data()
-    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'))
+    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'), without_question_data=True)
     message = 'Выберите какой вопрос вы хотите отредактировать: \n' + '\n'.join(f'{q_number}. {question}'
                                                                                 for q_number, question in questions.items())
     await callback.answer()
@@ -175,28 +185,34 @@ async def survey_edit_handler(callback: CallbackQuery, state: FSMContext, bot: B
 async def edit_button_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     question_number = callback.data.split('_')[-1]
     state_data = await state.get_data()
-    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'))
-    question = questions.get(int(question_number))
+    event_type = state_data.get('user_data').get('Мероприятие')
     await callback.answer()
     await callback.message.delete()
-    send_question = await bot.send_message(chat_id=callback.message.chat.id, text=question)
-    await state.update_data(edited_question_number=question_number, message_to_delete=send_question.message_id)
+    question_message_id = await send_next_question(event_type=event_type, question_number=question_number,
+                                                   chat_id=callback.message.chat.id, bot=bot)
+    await state.update_data(edited_question_number=question_number, message_to_delete=question_message_id)
 
 
+@router.callback_query(StateFilter(SurveyState.survey_editing))
 @router.message(StateFilter(SurveyState.survey_editing))
-async def question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
-    answer = msg.text
-    await msg.delete()
+async def question_answer_handler(msg: Message | CallbackQuery, state: FSMContext, bot: Bot):
+    if isinstance(msg, Message):
+        answer = msg.text
+        chat_id = msg.chat.id
+        await msg.delete()
+    else:
+        answer = msg.data.split('_')[-1]
+        chat_id = msg.message.chat.id
     state_data = await state.get_data()
     if 'message_to_delete' in state_data:
         message_id = state_data.pop('message_to_delete')
-        await bot.delete_message(chat_id=msg.chat.id, message_id=message_id)
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
     edit_msg_id = state_data.get('edited_msg_id')
-    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'))
+    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'), without_question_data=True)
     edited_question_number, survey_answers = state_data.get('edited_question_number'), state_data.get('survey_answers')
     survey_answers.update({int(edited_question_number): answer})
     await state.set_state(SurveyState.survey_started)
     await state.update_data(survey_answers=survey_answers)
     message = generate_survey_confirm_text(questions, survey_answers)
-    await bot.edit_message_text(chat_id=msg.chat.id, message_id=edit_msg_id, text=message,
+    await bot.edit_message_text(chat_id=chat_id, message_id=edit_msg_id, text=message,
                                 reply_markup=survey_confirm_menu, parse_mode='Markdown')

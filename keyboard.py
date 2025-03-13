@@ -26,6 +26,7 @@ def generate_event_type_menu(event_types):
     builder.adjust(2)
     return builder
 
+
 def generate_survey_edit_menu(question_numbers):
     builder = InlineKeyboardBuilder()
 
@@ -33,3 +34,12 @@ def generate_survey_edit_menu(question_numbers):
         builder.button(text=str(q_number), callback_data=f'answeredit_{q_number}')
     builder.adjust(5)
     return builder
+
+
+def generate_question_answer_menu(answers: list):
+    builder = InlineKeyboardBuilder()
+
+    for answer in answers:
+        builder.button(text=str(answer), callback_data=f'answer_{answer}')
+    builder.adjust(3)
+    return builder.as_markup()

@@ -5,21 +5,29 @@ from aiogram import Bot
 from database import get_collection, SURVEYS
 from datetime import datetime
 
+from keyboard import generate_question_answer_menu
 
 survey_questions = {
     'Cвадьба':
-        {1: 'Как зовут молодоженов?', 2: 'Сколько лет?', 3: 'Как познакомились?',
-         4: 'Какие увлечения/хобби?', 5: 'Любимый цвет?', 6: 'Любимые исполнители?',
-         7: 'Предпочтительный стиль проведения мероприятия?', 8: 'Любимое время года?',
-         9: 'Любимая марка авто?'},
+        {1: {'question': 'Как зовут молодоженов?'}, 2: {'question': 'Сколько лет?'},
+         3: {'question': 'Как познакомились?'},
+         4: {'question': 'Какие увлечения/хобби?'}, 5: {'question': 'Любимый цвет?'},
+         6: {'question': 'Любимые исполнители?'},
+         7: {'question': 'Предпочтительный стиль проведения мероприятия?'},
+         8: {'question': 'Любимое время года?'},
+         9: {'question': 'Любимая марка авто?'}},
     'День рождения':
-        {1: 'Как зовут именинника?', 2: 'Cколько исполняется лет?', 3: 'Любимый цвет?', 4: 'Сфера деятельности?',
-         5: 'Любимое хобби?', 6: 'Любимый исполнитель?'},
+        {1: {'question': 'Как зовут именинника?'}, 2: {'question': 'Cколько исполняется лет?'},
+         3: {'question': 'Любимый цвет?'}, 4: {'question': 'Сфера деятельности?'},
+         5: {'question': 'Любимое хобби?'}, 6: {'question': 'Любимый исполнитель?'}},
     'Корпоратив':
-        {1: 'Название компании?', 2: 'Сфера деятельности?', 3: 'Количество сотрудников?', 4: 'Формат Корпоратива?',
-         5: 'Тематический или деловой корпоратив?'},
+        {1: {'question': 'Название компании?'}, 2: {'question': 'Сфера деятельности?'},
+         3: {'question': 'Количество сотрудников?'}, 4: {'question': 'Формат Корпоратива?',
+                                                         'variants': ['Отдых на природе', 'Ресторан и шоу программа']},
+         5: {'question': 'Тематический или деловой корпоратив?', 'variants': ['Тематический', 'Деловой']}},
     'Конференция':
-        {1: 'Название компании?', 2: 'Тема конференции?', 3: 'Количество человек?'}
+        {1: {'question': 'Название компании?'}, 2: {'question': 'Тема конференции?'},
+         3: {'question': 'Количество человек?'}}
 }
 
 
@@ -56,14 +64,30 @@ async def save_survey_to_db(user_id, survey_data, questions, user_data):
     collection.insert_one(data)
 
 
-def get_survey_questions(event_type: str):
-    return survey_questions.get(event_type, {})
+def get_survey_questions(event_type: str, without_question_data=False):
+    questions = survey_questions.get(event_type, {})
+    if without_question_data:
+        questions = {q_number: q_data.get('question') for q_number, q_data in questions.items()}
+    return questions
 
 
-def get_next_question(event_type: str, question_number: int):
+def get_next_question(event_type: str, question_number: int) -> (str, list | None):
     questions = get_survey_questions(event_type)
-    return questions.get(question_number)
+    question_data = questions.get(question_number)
+    question, variants = question_data.get('question'), question_data.get('variants')
+    return question, variants
 
 
 def get_survey_question_number(event_type: str):
     return len(survey_questions.get(event_type, {}))
+
+
+async def send_next_question(event_type, question_number, chat_id, bot: Bot):
+    keyboard = None
+    question, variants = get_next_question(event_type, int(question_number))
+    if variants:
+        keyboard = generate_question_answer_menu(variants)
+    message = await bot.send_message(chat_id=chat_id, text=question, reply_markup=keyboard)
+    return message.message_id
+
+
