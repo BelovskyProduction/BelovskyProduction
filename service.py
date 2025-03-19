@@ -4,7 +4,7 @@ import os
 import logging
 import json
 
-from aiogram import Bot
+from aiogram import Bot, md
 from openai import AsyncOpenAI, OpenAIError
 
 import text
@@ -116,7 +116,7 @@ async def check_if_user_can_start_survey(user_id: int):
 
 def generate_survey_confirm_text(questions, survey_answers):
     message = 'Результаты опроса:\n\n' + '\n'.join(
-        f"*Вопрос*: {question} *Ответ*: {survey_answers.get(question_number, 'Нет ответа')}"
+        f"*Вопрос*: {question} *Ответ*: {md.quote(survey_answers.get(question_number, 'Нет ответа'))}"
         for question_number, question in questions.items()
     )
     return message
