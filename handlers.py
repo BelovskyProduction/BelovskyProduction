@@ -169,7 +169,7 @@ async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot:
     await callback.answer()
     await callback.message.delete()
     await bot.send_message(chat_id=chat_id, text=text.survey_finished_message)
-    conception = await get_event_conception(event_type, survey_answers, int(os.getenv('MAX_RETRIES')))
+    conception = await get_event_conception(event_type, survey_answers, int(os.getenv('MAX_RETRIES', 2)))
     if not conception:
         return await bot.send_message(chat_id=chat_id, text=text.conception_error, reply_markup=main_menu)
 
