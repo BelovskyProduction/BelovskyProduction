@@ -1,3 +1,5 @@
+import os
+
 from aiogram import Router, Bot
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -10,7 +12,7 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
     survey_request_menu
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_next_question, get_survey_question_number, get_survey_questions, \
-    send_next_question
+    send_next_question, generate_event_conception, get_event_conception, format_conception
 from utils import format_message
 
 router = Router()
@@ -158,13 +160,22 @@ async def question_answer_handler(msg: Message | CallbackQuery, state: FSMContex
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('surveymenu_confirm'))
 async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_id = callback.from_user.id
+    chat_id = callback.message.chat.id
     state_data = await state.get_data()
-    questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'), without_question_data=True)
-    await save_survey_to_db(user_id, state_data.get('survey_answers'), questions, state_data.get('user_data'))
+    event_type = state_data.get('user_data').get('Мероприятие')
+    survey_answers = state_data.get('survey_answers')
+    questions = get_survey_questions(event_type, without_question_data=True)
     await state.set_state(SurveyState.ready_to_survey)
     await callback.answer()
     await callback.message.delete()
-    await bot.send_message(chat_id=callback.message.chat.id, text=text.survey_finished_message, reply_markup=main_menu)
+    await bot.send_message(chat_id=chat_id, text=text.survey_finished_message)
+    conception = await get_event_conception(event_type, survey_answers, int(os.getenv('MAX_RETRIES')))
+    if not conception:
+        return await bot.send_message(chat_id=chat_id, text=text.conception_error, reply_markup=main_menu)
+
+    user_conception_format, full_conception = await format_conception(conception, event_type)
+    await save_survey_to_db(user_id, survey_answers, questions, state_data.get('user_data'), full_conception)
+    await bot.send_message(chat_id=chat_id, text=user_conception_format, parse_mode='Markdown', reply_markup=main_menu)
 
 
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('surveymenu_edit'))

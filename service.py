@@ -1,7 +1,13 @@
+import asyncio
+import functools
 import os
+import logging
+import json
 
 from aiogram import Bot
+from openai import AsyncOpenAI, OpenAIError
 
+import text
 from database import get_collection, SURVEYS
 from datetime import datetime
 
@@ -30,6 +36,68 @@ survey_questions = {
          3: {'question': 'Количество человек?'}}
 }
 
+prompt_details = {'Конференция': ['Название конференции', 'Дата и место проведения', 'Целевая аудитория',
+                                  'Программа мероприятия', 'Дополнительные элементы', 'Маркетинг и продвижение',
+                                  'Ожидаемые результаты'],
+                  'Корпоратив': ['Название мероприятия', 'Дата и место проведения', 'Цель мероприятия', 'Тематика',
+                                 'Программа мероприятия', 'Дополнительные элементы'],
+                  'День рождения': ['Тема мероприятия', 'Место', 'Оформление', 'Программа мероприятия', 'Угощения',
+                                    'Подарки'],
+                  'Свадьба': ['Общая идея', 'Место проведения', 'Декор',
+                              'Программа', 'Кулинарное меню', 'Дресс-код']}
+
+
+logger = logging.getLogger()
+
+
+@functools.lru_cache(maxsize=1)
+def get_open_ai_client() -> AsyncOpenAI:
+    return AsyncOpenAI(api_key=os.getenv('OPEN_AI_TOKEN'), max_retries=0)
+
+
+def get_prompt(event_type, survey_answers):
+    user_content = f"Сгенерируй концепцию для мероприятия типа: '{event_type}' на основе следующих ответов: {survey_answers}. " \
+                   f"Ответ должен содержать только следующие пункты: {prompt_details.get(event_type)}. "
+    prompt = {'model': os.getenv('LLM_MODEL'), 'response_format': {'type': 'json_object'}}
+    messages = [{'role': "system", "content": "You are a helpful assistant. You response in JSON format"},
+                {'role': 'user', "content": user_content}]
+    prompt.update({'messages': messages})
+    return prompt
+
+
+async def format_conception(conception: str, event_type: str) -> (str, dict):
+    try:
+        json_conception = json.loads(conception)
+        user_conception_keys = prompt_details.get(event_type)[0:2]
+        user_conception_format = text.conception_message + ''.join(f'\n\n\t *{key}*: {json_conception.get(key, None)}'
+                                                                   for key in user_conception_keys)
+        return user_conception_format, json_conception
+
+    except json.JSONDecodeError as e:
+        logger.error('Conception format error: %s', e.args)
+        return conception, conception
+    except Exception as e:
+        logger.error('Conception format error: %s', e.args)
+        return conception, conception
+
+
+async def get_event_conception(event_type, survey_answers, retries):
+    delay_in_seconds = int(os.getenv('RETRY_DELAY_MINUTES', 2)) * 60
+    while retries > 0:
+        try:
+            return await generate_event_conception(event_type, survey_answers)
+        except OpenAIError as e:
+            logger.error('Conception generation error: %s', e.args)
+            await asyncio.sleep(delay_in_seconds)
+            retries -= 1
+
+
+async def generate_event_conception(event_type, survey_answers):
+    gpt_client = get_open_ai_client()
+    prompt = get_prompt(event_type, survey_answers)
+    completion = await gpt_client.chat.completions.create(**prompt)
+    return completion.choices[0].message.content
+
 
 async def notify_admin_about_new_client(user_data, bot: Bot):
     admin_id = os.getenv('ADMIN_ID')
@@ -54,13 +122,13 @@ def generate_survey_confirm_text(questions, survey_answers):
     return message
 
 
-async def save_survey_to_db(user_id, survey_data, questions, user_data):
+async def save_survey_to_db(user_id, survey_data, questions, user_data, conception):
     collection = get_collection(SURVEYS)
     current_date = datetime.now().strftime('%d %b %Y %H:%M:%S')
     answers = {}
     for question, answer in zip(questions.values(), survey_data.values()):
         answers.update({question: answer})
-    data = {'user_id': user_id, **user_data, 'answers': answers, 'created_at': current_date}
+    data = {'user_id': user_id, **user_data, 'answers': answers, 'conception': conception, 'created_at': current_date}
     collection.insert_one(data)
 
 
