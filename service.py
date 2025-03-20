@@ -36,14 +36,14 @@ survey_questions = {
          3: {'question': 'Количество человек?'}}
 }
 
-prompt_details = {'Конференция': ['Название конференции', 'Целевая аудитория', 'Дата и место проведения',
+prompt_details = {'Конференция': ['Название конференции', 'Целевая аудитория',
                                   'Программа мероприятия', 'Дополнительные элементы', 'Маркетинг и продвижение',
                                   'Ожидаемые результаты'],
-                  'Корпоратив': ['Название мероприятия', 'Дата и место проведения', 'Цель мероприятия', 'Тематика',
+                  'Корпоратив': ['Название мероприятия', 'Цель мероприятия', 'Тематика',
                                  'Программа мероприятия', 'Дополнительные элементы'],
-                  'День рождения': ['Тема мероприятия', 'Место', 'Оформление', 'Программа мероприятия', 'Угощения',
+                  'День рождения': ['Тема мероприятия', 'Место', 'Оформление', 'Угощения', 'Программа мероприятия',
                                     'Подарки'],
-                  'Свадьба': ['Общая идея', 'Место проведения', 'Декор',
+                  'Свадьба': ['Общая идея', 'Тематика и атмосфера', 'Декор', 'Свадебный торт', 'Место проведения',
                               'Программа', 'Кулинарное меню', 'Дресс-код']}
 
 
@@ -57,7 +57,8 @@ def get_open_ai_client() -> AsyncOpenAI:
 
 def get_prompt(event_type, survey_answers):
     user_content = f"Сгенерируй концепцию для мероприятия типа: '{event_type}' на основе следующих ответов: {survey_answers}. " \
-                   f"Ответ должен содержать только следующие пункты: {prompt_details.get(event_type)}. "
+                   f"Ответ должен содержать только следующие пункты: {prompt_details.get(event_type)}. " \
+                   f"Значение пунктов должно быть в виде текста"
     prompt = {'model': os.getenv('LLM_MODEL'), 'response_format': {'type': 'json_object'}}
     messages = [{'role': "system", "content": "You are a helpful assistant. You response in JSON format"},
                 {'role': 'user', "content": user_content}]
@@ -68,7 +69,7 @@ def get_prompt(event_type, survey_answers):
 async def format_conception(conception: str, event_type: str) -> (str, dict):
     try:
         json_conception = json.loads(conception)
-        user_conception_keys = prompt_details.get(event_type)[0:2]
+        user_conception_keys = prompt_details.get(event_type)[0:4]
         user_conception_format = text.conception_message + ''.join(f'\n\n\t *{key}*: {json_conception.get(key, None)}'
                                                                    for key in user_conception_keys)
         return user_conception_format, json_conception
