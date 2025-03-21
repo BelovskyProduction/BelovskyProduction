@@ -27,7 +27,7 @@ class AnswerTypes(Enum):
 survey_questions = {
     'Cвадьба':
         {1: {'question': 'Как зовут молодоженов?', 'type': AnswerTypes.text},
-         2: {'question': 'Сколько лет?', 'type': AnswerTypes.age},
+         2: {'question': 'Сколько лет?', 'type': AnswerTypes.text},
          3: {'question': 'Как познакомились?', 'type': AnswerTypes.large_text},
          4: {'question': 'Какие увлечения/хобби?', 'type': AnswerTypes.large_text},
          5: {'question': 'Любимый цвет?', 'type': AnswerTypes.text},

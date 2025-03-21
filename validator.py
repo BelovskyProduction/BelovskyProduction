@@ -60,7 +60,7 @@ class EmailValidator(BaseModel):
 
 
 class NumberValidator(BaseModel):
-    answer: int = Field(gt=0, lt=100000)
+    answer: int = Field(gt=0, lt=500000)
 
 
 class AgeValidator(BaseModel):
