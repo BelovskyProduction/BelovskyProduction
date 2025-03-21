@@ -146,12 +146,17 @@ def generate_survey_confirm_text(questions, survey_answers):
     return message
 
 
+def unite_questions_and_answers(questions, answers):
+    united_answers = {}
+    for question, answer in zip(questions.values(), answers.values()):
+        united_answers.update({question: answer})
+    return united_answers
+
+
 async def save_survey_to_db(user_id, survey_data, questions, user_data, conception):
     collection = get_collection(SURVEYS)
     current_date = datetime.now().strftime('%d %b %Y %H:%M:%S')
-    answers = {}
-    for question, answer in zip(questions.values(), survey_data.values()):
-        answers.update({question: answer})
+    answers = unite_questions_and_answers(questions, survey_data)
     data = {'user_id': user_id, **user_data, 'answers': answers, 'conception': conception, 'created_at': current_date}
     collection.insert_one(data)
 

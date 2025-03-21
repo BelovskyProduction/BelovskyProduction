@@ -13,7 +13,7 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_next_question, get_survey_question_number, get_survey_questions, \
     send_next_question, generate_event_conception, get_event_conception, format_conception, get_next_chat_question, \
-    get_chat_question_number, get_question_answer_type
+    get_chat_question_number, get_question_answer_type, unite_questions_and_answers
 from utils import format_message
 from validator import AnswerValidator
 
@@ -181,7 +181,8 @@ async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot:
     await callback.answer()
     await callback.message.delete()
     await bot.send_message(chat_id=chat_id, text=text.survey_finished_message)
-    conception = await get_event_conception(event_type, survey_answers, int(os.getenv('MAX_RETRIES', 2)))
+    united_answers = unite_questions_and_answers(questions, survey_answers)
+    conception = await get_event_conception(event_type, united_answers, int(os.getenv('MAX_RETRIES', 2)))
     if not conception:
         return await bot.send_message(chat_id=chat_id, text=text.conception_error, reply_markup=main_menu)
 
