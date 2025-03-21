@@ -135,7 +135,7 @@ async def start_survey_handler(msg: Message, state: FSMContext, bot: Bot):
 
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('answer_'))
 @router.message(StateFilter(SurveyState.survey_started))
-async def question_answer_handler(msg: Message | CallbackQuery, state: FSMContext, bot: Bot):
+async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FSMContext, bot: Bot):
     if isinstance(msg, Message):
         answer = msg.text
         chat_id = msg.chat.id
@@ -149,6 +149,11 @@ async def question_answer_handler(msg: Message | CallbackQuery, state: FSMContex
         message_id = state_data.pop('message_to_delete')
         await bot.delete_message(chat_id=chat_id, message_id=message_id)
     current_question_number, survey_answers = state_data.get('last_question_number'), state_data.get('survey_answers')
+    answer_type = get_question_answer_type(current_question_number, event_type)
+    validated, error_message = AnswerValidator.validate(answer, answer_type)
+    if not validated:
+        error_message = await bot.send_message(chat_id=msg.chat.id, text=error_message)
+        return await state.update_data(message_to_delete=error_message.message_id)
     survey_answers.update({current_question_number: answer})
 
     if current_question_number != get_survey_question_number(event_type):
@@ -213,7 +218,7 @@ async def edit_button_handler(callback: CallbackQuery, state: FSMContext, bot: B
 
 @router.callback_query(StateFilter(SurveyState.survey_editing))
 @router.message(StateFilter(SurveyState.survey_editing))
-async def question_answer_handler(msg: Message | CallbackQuery, state: FSMContext, bot: Bot):
+async def survey_edit_question_answer_handler(msg: Message | CallbackQuery, state: FSMContext, bot: Bot):
     if isinstance(msg, Message):
         answer = msg.text
         chat_id = msg.chat.id
@@ -222,12 +227,18 @@ async def question_answer_handler(msg: Message | CallbackQuery, state: FSMContex
         answer = msg.data.split('_')[-1]
         chat_id = msg.message.chat.id
     state_data = await state.get_data()
+    event_type = state_data.get('user_data').get('Мероприятие')
     if 'message_to_delete' in state_data:
         message_id = state_data.pop('message_to_delete')
         await bot.delete_message(chat_id=chat_id, message_id=message_id)
     edit_msg_id = state_data.get('edited_msg_id')
     questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'), without_question_data=True)
     edited_question_number, survey_answers = state_data.get('edited_question_number'), state_data.get('survey_answers')
+    answer_type = get_question_answer_type(int(edited_question_number), event_type)
+    validated, error_message = AnswerValidator.validate(answer, answer_type)
+    if not validated:
+        error_message = await bot.send_message(chat_id=msg.chat.id, text=error_message)
+        return await state.update_data(message_to_delete=error_message.message_id)
     survey_answers.update({int(edited_question_number): answer})
     await state.set_state(SurveyState.survey_started)
     await state.update_data(survey_answers=survey_answers)
