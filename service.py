@@ -56,6 +56,9 @@ survey_questions = {
          3: {'question': 'Количество человек?', 'type': AnswerTypes.number}}
 }
 
+chat_questions = {1: {'question': 'Как тебя зовут?', 'type': AnswerTypes.text},
+                  2: {'question': 'Номер телефона для связи?', 'type': AnswerTypes.phone}}
+
 prompt_details = {'Конференция': ['Название конференции', 'Целевая аудитория',
                                   'Программа мероприятия', 'Дополнительные элементы', 'Маркетинг и продвижение',
                                   'Ожидаемые результаты'],
@@ -160,6 +163,11 @@ def get_survey_questions(event_type: str, without_question_data=False):
     return questions
 
 
+def get_next_chat_question(question_number: int):
+    question_data = chat_questions.get(question_number, {})
+    return question_data.get('question', None)
+
+
 def get_next_question(event_type: str, question_number: int) -> (str, list | None):
     questions = get_survey_questions(event_type)
     question_data = questions.get(question_number)
@@ -167,14 +175,21 @@ def get_next_question(event_type: str, question_number: int) -> (str, list | Non
     return question, variants
 
 
-def get_question_answer_type(event_type: str, question_number: int):
-    questions = get_survey_questions(event_type)
+def get_question_answer_type(question_number: int, event_type: str = None):
+    if event_type:
+        questions = get_survey_questions(event_type)
+    else:
+        questions = chat_questions
     question_data = questions.get(question_number)
     return question_data.get('type')
 
 
 def get_survey_question_number(event_type: str):
     return len(survey_questions.get(event_type, {}))
+
+
+def get_chat_question_number():
+    return len(chat_questions)
 
 
 async def send_next_question(event_type, question_number, chat_id, bot: Bot):

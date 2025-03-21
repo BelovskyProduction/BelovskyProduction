@@ -12,12 +12,13 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
     survey_request_menu
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_next_question, get_survey_question_number, get_survey_questions, \
-    send_next_question, generate_event_conception, get_event_conception, format_conception
+    send_next_question, generate_event_conception, get_event_conception, format_conception, get_next_chat_question, \
+    get_chat_question_number, get_question_answer_type
 from utils import format_message
+from validator import AnswerValidator
 
 router = Router()
 
-chat_questions = {1: 'Как тебя зовут?', 2: 'Номер телефона для связи?'}
 event_types = ['Cвадьба', 'День рождения', 'Корпоратив', 'Конференция', 'Другое']
 
 user_data_map = {1: 'Имя', 2: 'Номер телефона'}
@@ -40,7 +41,7 @@ async def start_handler(msg: Message, state: FSMContext):
         message = format_message(text.welcome_message, username=msg.from_user.username)
         await state.set_state(SurveyState.chat_started)
         await msg.answer(text=message, reply_markup=ReplyKeyboardRemove())
-        question = chat_questions.get(question_number)
+        question = get_next_chat_question(question_number)
         send_question = await msg.answer(text=question)
         await state.update_data(last_question_number=question_number, user_data={},
                                 message_to_delete=send_question.message_id)
@@ -55,12 +56,18 @@ async def chat_question_answer_handler(msg: Message, state: FSMContext, bot: Bot
         message_id = state_data.pop('message_to_delete')
         await bot.delete_message(chat_id=msg.chat.id, message_id=message_id)
     current_question_number, user_data = state_data.get('last_question_number'), state_data.get('user_data')
+    answer_type = get_question_answer_type(current_question_number)
+    validated, error_message = AnswerValidator.validate(answer, answer_type)
+    if not validated:
+        error_message = await bot.send_message(chat_id=msg.chat.id, text=error_message)
+        return await state.update_data(message_to_delete=error_message.message_id)
+
     user_data.update({user_data_map.get(current_question_number): answer})
     await state.update_data(user_data=user_data)
 
-    if current_question_number != len(chat_questions):
+    if current_question_number != get_chat_question_number():
         current_question_number += 1
-        question = chat_questions.get(current_question_number)
+        question = get_next_chat_question(current_question_number)
         send_question = await msg.answer(text=question)
         await state.update_data(last_question_number=current_question_number,
                                 message_to_delete=send_question.message_id)
