@@ -19,7 +19,7 @@ from validator import AnswerValidator
 
 router = Router()
 
-event_types = ['Cвадьба', 'День рождения', 'Корпоратив', 'Конференция', 'Другое']
+event_types = ['Свадьба', 'День рождения', 'Корпоратив', 'Конференция', 'Другое']
 
 user_data_map = {1: 'Имя', 2: 'Номер телефона'}
 
