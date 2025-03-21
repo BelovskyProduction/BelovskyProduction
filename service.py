@@ -3,6 +3,7 @@ import functools
 import os
 import logging
 import json
+from enum import Enum
 
 from aiogram import Bot, md
 from openai import AsyncOpenAI, OpenAIError
@@ -13,27 +14,46 @@ from datetime import datetime
 
 from keyboard import generate_question_answer_menu
 
+
+class AnswerTypes(Enum):
+    email = 'email'
+    phone = 'phone'
+    text = 'text'
+    large_text = 'large_text'
+    age = 'age'
+    number = 'number'
+
+
 survey_questions = {
     'Cвадьба':
-        {1: {'question': 'Как зовут молодоженов?'}, 2: {'question': 'Сколько лет?'},
-         3: {'question': 'Как познакомились?'},
-         4: {'question': 'Какие увлечения/хобби?'}, 5: {'question': 'Любимый цвет?'},
-         6: {'question': 'Любимые исполнители?'},
-         7: {'question': 'Предпочтительный стиль проведения мероприятия?'},
-         8: {'question': 'Любимое время года?'},
-         9: {'question': 'Любимая марка авто?'}},
+        {1: {'question': 'Как зовут молодоженов?', 'type': AnswerTypes.text},
+         2: {'question': 'Сколько лет?', 'type': AnswerTypes.age},
+         3: {'question': 'Как познакомились?', 'type': AnswerTypes.large_text},
+         4: {'question': 'Какие увлечения/хобби?', 'type': AnswerTypes.large_text},
+         5: {'question': 'Любимый цвет?', 'type': AnswerTypes.text},
+         6: {'question': 'Любимые исполнители?', 'type': AnswerTypes.text},
+         7: {'question': 'Предпочтительный стиль проведения мероприятия?', 'type': AnswerTypes.text},
+         8: {'question': 'Любимое время года?', 'type': AnswerTypes.text},
+         9: {'question': 'Любимая марка авто?', 'type': AnswerTypes.text}},
     'День рождения':
-        {1: {'question': 'Как зовут именинника?'}, 2: {'question': 'Cколько исполняется лет?'},
-         3: {'question': 'Любимый цвет?'}, 4: {'question': 'Сфера деятельности?'},
-         5: {'question': 'Любимое хобби?'}, 6: {'question': 'Любимый исполнитель?'}},
+        {1: {'question': 'Как зовут именинника?', 'type': AnswerTypes.text},
+         2: {'question': 'Cколько исполняется лет?', 'type': AnswerTypes.age},
+         3: {'question': 'Любимый цвет?', 'type': AnswerTypes.text},
+         4: {'question': 'Сфера деятельности?', 'type': AnswerTypes.text},
+         5: {'question': 'Любимое хобби?', 'type': AnswerTypes.text},
+         6: {'question': 'Любимый исполнитель?', 'type': AnswerTypes.text}},
     'Корпоратив':
-        {1: {'question': 'Название компании?'}, 2: {'question': 'Сфера деятельности?'},
-         3: {'question': 'Количество сотрудников?'}, 4: {'question': 'Формат Корпоратива?',
-                                                         'variants': ['Отдых на природе', 'Ресторан и шоу программа']},
-         5: {'question': 'Тематический или деловой корпоратив?', 'variants': ['Тематический', 'Деловой']}},
+        {1: {'question': 'Название компании?', 'type': AnswerTypes.text},
+         2: {'question': 'Сфера деятельности?', 'type': AnswerTypes.text},
+         3: {'question': 'Количество сотрудников?', 'type': AnswerTypes.number},
+         4: {'question': 'Формат Корпоратива?', 'type': AnswerTypes.text,
+             'variants': ['Отдых на природе', 'Ресторан и шоу программа']},
+         5: {'question': 'Тематический или деловой корпоратив?', 'type': AnswerTypes.text,
+             'variants': ['Тематический', 'Деловой']}},
     'Конференция':
-        {1: {'question': 'Название компании?'}, 2: {'question': 'Тема конференции?'},
-         3: {'question': 'Количество человек?'}}
+        {1: {'question': 'Название компании?', 'type': AnswerTypes.text},
+         2: {'question': 'Тема конференции?', 'type': AnswerTypes.text},
+         3: {'question': 'Количество человек?', 'type': AnswerTypes.number}}
 }
 
 prompt_details = {'Конференция': ['Название конференции', 'Целевая аудитория',
@@ -105,7 +125,7 @@ async def notify_admin_about_new_client(user_data, bot: Bot):
     message = f'У вас новый клиент! \n'
     for key, value in user_data.items():
         message += f'{key}: {value} \n'
-    await bot.send_message(chat_id=int(admin_id), text=message)
+    # await bot.send_message(chat_id=int(admin_id), text=message)
 
 
 async def check_if_user_can_start_survey(user_id: int):
@@ -145,6 +165,12 @@ def get_next_question(event_type: str, question_number: int) -> (str, list | Non
     question_data = questions.get(question_number)
     question, variants = question_data.get('question'), question_data.get('variants')
     return question, variants
+
+
+def get_question_answer_type(event_type: str, question_number: int):
+    questions = get_survey_questions(event_type)
+    question_data = questions.get(question_number)
+    return question_data.get('type')
 
 
 def get_survey_question_number(event_type: str):
