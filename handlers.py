@@ -154,7 +154,7 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
     if not validated:
         error_message = await bot.send_message(chat_id=msg.chat.id, text=error_message)
         return await state.update_data(message_to_delete=error_message.message_id)
-    survey_answers.update({current_question_number: answer})
+    survey_answers.update({str(current_question_number): answer})
 
     if current_question_number != get_survey_question_number(event_type):
         current_question_number += 1
@@ -163,6 +163,7 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
         await state.update_data(last_question_number=current_question_number, survey_answers=survey_answers,
                                 message_to_delete=question_message_id)
     else:
+        await state.update_data(survey_answers=survey_answers)
         questions = get_survey_questions(event_type, without_question_data=True)
         message = generate_survey_confirm_text(questions, survey_answers)
 
@@ -240,7 +241,7 @@ async def survey_edit_question_answer_handler(msg: Message | CallbackQuery, stat
     if not validated:
         error_message = await bot.send_message(chat_id=msg.chat.id, text=error_message)
         return await state.update_data(message_to_delete=error_message.message_id)
-    survey_answers.update({int(edited_question_number): answer})
+    survey_answers.update({str(edited_question_number): answer})
     await state.set_state(SurveyState.survey_started)
     await state.update_data(survey_answers=survey_answers)
     message = generate_survey_confirm_text(questions, survey_answers)
