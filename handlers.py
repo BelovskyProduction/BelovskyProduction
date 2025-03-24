@@ -11,8 +11,8 @@ import text
 from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, generate_event_type_menu,\
     survey_request_menu
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
-    notify_admin_about_new_client, get_next_question, get_survey_question_number, get_survey_questions, \
-    send_next_question, generate_event_conception, get_event_conception, format_conception, get_next_chat_question, \
+    notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
+    send_next_question, get_event_conception, format_conception, get_next_chat_question, \
     get_chat_question_number, get_question_answer_type, unite_questions_and_answers
 from utils import format_message
 from validator import AnswerValidator
@@ -23,7 +23,8 @@ event_types = ['Свадьба', 'День рождения', 'Корпорат�
 
 user_data_map = {1: 'Имя', 2: 'Номер телефона'}
 
-#TODO: add handling when usere type text answer instead of click answer button, fix error when typing special symbols([])
+#TODO: add handling when usere type text answer instead of click answer button, when user editing he can press edit button
+
 
 class SurveyState(StatesGroup):
     chat_started = State()

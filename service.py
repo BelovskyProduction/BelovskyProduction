@@ -128,7 +128,7 @@ async def notify_admin_about_new_client(user_data, bot: Bot):
     message = f'У вас новый клиент! \n'
     for key, value in user_data.items():
         message += f'{key}: {value} \n'
-    # await bot.send_message(chat_id=int(admin_id), text=message)
+    await bot.send_message(chat_id=int(admin_id), text=message)
 
 
 async def check_if_user_can_start_survey(user_id: int):
