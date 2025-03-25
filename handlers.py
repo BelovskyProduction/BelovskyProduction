@@ -31,6 +31,7 @@ class SurveyState(StatesGroup):
     ready_to_survey = State()
     survey_started = State()
     survey_editing = State()
+    conception_generating = State()
 
 
 @router.message(Command('start'))
@@ -44,7 +45,7 @@ async def start_handler(msg: Message, state: FSMContext):
         await msg.answer(text=message, reply_markup=ReplyKeyboardRemove())
         question = get_next_chat_question(question_number)
         send_question = await msg.answer(text=question)
-        await state.update_data(last_question_number=question_number, user_data={},
+        await state.update_data(user_id=msg.from_user.id, last_question_number=question_number, user_data={},
                                 message_to_delete=send_question.message_id)
 
 
@@ -184,7 +185,9 @@ async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot:
     await callback.message.delete()
     await bot.send_message(chat_id=chat_id, text=text.survey_finished_message)
     united_answers = unite_questions_and_answers(questions, survey_answers)
+    await state.set_state(SurveyState.conception_generating)
     conception = await get_event_conception(event_type, united_answers, int(os.getenv('MAX_RETRIES', 2)))
+    await state.set_state(SurveyState.ready_to_survey)
     if not conception:
         return await bot.send_message(chat_id=chat_id, text=text.conception_error, reply_markup=main_menu)
 
