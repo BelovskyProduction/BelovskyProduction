@@ -9,7 +9,7 @@ from aiogram import Bot, md
 from openai import AsyncOpenAI, OpenAIError
 
 import text
-from database import get_collection, SURVEYS
+from database import get_collection, SURVEYS, STATE_DATA
 from datetime import datetime
 
 from keyboard import generate_question_answer_menu
@@ -206,3 +206,37 @@ async def send_next_question(event_type, question_number, chat_id, bot: Bot):
     return message.message_id
 
 
+async def update_state_for_user_with_pending_generation():
+    logger.info('Collecting user ids')
+    collection = get_collection(STATE_DATA)
+    pending_users = collection.aggregate([
+        {'$match': {'state': 'SurveyState:conception_generating'}},
+        {'$project': {'_id': 0, 'user_id': '$data.user_id'}},
+        {'$group': {'_id': None, 'user_ids': {'$push': '$user_id'}}}
+    ]).to_list()
+    if pending_users:
+        user_ids = pending_users[0].get('user_ids', None)
+        logger.info('Updating users state')
+        update_result = collection.update_many({'state': 'SurveyState:conception_generating'},
+                                               {'$set': {'state': 'SurveyState:ready_to_survey'}})
+        logger.info('Updated users: %s', update_result.modified_count)
+        return user_ids
+
+    logger.info('Pending users not found')
+
+
+async def notify_pending_users(user_ids, bot):
+    for u_id in user_ids:
+        try:
+            await bot.send_message(chat_id=u_id, text=text.conception_error)
+        except Exception:
+            pass
+
+
+async def clear_pending_conception_generation(bot):
+    logger.info('Start clearing pending conception generation')
+    updated_users = await update_state_for_user_with_pending_generation()
+    if updated_users:
+        logger.info('Notifying pending users')
+        await notify_pending_users(updated_users, bot)
+    logger.info('Clearing finished')

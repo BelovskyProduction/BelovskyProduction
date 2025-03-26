@@ -8,6 +8,7 @@ client = MongoClient(os.getenv('MONGO_URL'))
 db = client[os.getenv('MONGO_DB_NAME')]
 
 SURVEYS = 'surveys'
+STATE_DATA = 'states_and_data'
 
 
 def get_collection(collection_name):
