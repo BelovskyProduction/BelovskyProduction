@@ -51,9 +51,12 @@ survey_questions = {
          5: {'question': 'Тематический или деловой корпоратив?', 'type': AnswerTypes.text,
              'variants': ['Тематический', 'Деловой']}},
     'Конференция':
-        {1: {'question': 'Название компании?', 'type': AnswerTypes.text},
+        {1: {'question': 'Название конференции?', 'type': AnswerTypes.text},
          2: {'question': 'Тема конференции?', 'type': AnswerTypes.text},
-         3: {'question': 'Количество человек?', 'type': AnswerTypes.number}}
+         3: {'question': 'Количество компаний учавствующих в конференции?', 'type': AnswerTypes.number},
+         4: {'question': 'Место проведения?', 'type': AnswerTypes.text},
+         5: {'question': 'Время проведения(месяц)?', 'type': AnswerTypes.text},
+         6: {'question': 'Цель конференции?', 'type': AnswerTypes.text}}
 }
 
 chat_questions = {1: {'question': 'Как тебя зовут?', 'type': AnswerTypes.text},
