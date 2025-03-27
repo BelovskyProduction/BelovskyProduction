@@ -106,7 +106,8 @@ async def survey_request_handler(callback: CallbackQuery, state: FSMContext, bot
         state_data = await state.get_data()
         event_type = state_data.get('user_data').get('Мероприятие')
 
-        await bot.send_message(chat_id=callback.message.chat.id, text=text.user_want_survey)
+        start_text = text.survey_start_text.get(event_type, text.user_want_survey)
+        await bot.send_message(chat_id=callback.message.chat.id, text=start_text)
         await state.set_state(SurveyState.survey_started.state)
         question_message_id = await send_next_question(event_type=event_type, question_number=question_number,
                                                        chat_id=chat_id, bot=bot)
