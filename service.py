@@ -12,7 +12,7 @@ import text
 from database import get_collection, SURVEYS, STATE_DATA
 from datetime import datetime
 
-from keyboard import generate_question_answer_menu
+from keyboard import generate_question_answer_menu, main_menu
 
 
 class AnswerTypes(Enum):
@@ -231,7 +231,7 @@ async def update_state_for_user_with_pending_generation():
 async def notify_pending_users(user_ids, bot):
     for u_id in user_ids:
         try:
-            await bot.send_message(chat_id=u_id, text=text.conception_error)
+            await bot.send_message(chat_id=u_id, text=text.conception_error, reply_markup=main_menu)
         except Exception:
             pass
 
