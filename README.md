@@ -10,6 +10,7 @@
         MONGO_DB_NAME - MongoDB Database name
         LLM_MODEL - LLM model to generate event conception
         OPEN_AI_TOKEN - Open ai api token
+        BASE_AI_URL - AI url
         MAX_SURVEYS_NUMBER - max surveys that user can take
 
     Other:
