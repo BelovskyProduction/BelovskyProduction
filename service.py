@@ -78,7 +78,7 @@ logger = logging.getLogger()
 
 @functools.lru_cache(maxsize=1)
 def get_open_ai_client() -> AsyncOpenAI:
-    return AsyncOpenAI(api_key=os.getenv('OPEN_AI_TOKEN'), max_retries=0)
+    return AsyncOpenAI(api_key=os.getenv('OPEN_AI_TOKEN'), base_url=os.getenv('BASE_AI_URL'), max_retries=0)
 
 
 def get_prompt(event_type, survey_answers):
