@@ -92,8 +92,15 @@ def get_prompt(event_type, survey_answers):
     return prompt
 
 
+def clean_json_block(json_block: str):
+    if json_block.startswith("```") and json_block.endswith("```"):
+        return json_block.strip("`")
+    return json_block
+
+
 async def format_conception(conception: str, event_type: str) -> (str, dict):
     try:
+        conception = clean_json_block(conception)
         json_conception = json.loads(conception)
         user_conception_keys = prompt_details.get(event_type)[0:4]
         user_conception_format = text.conception_message + ''.join(f'\n\n\t *{key}*: {json_conception.get(key, None)}'
