@@ -6,6 +6,7 @@ import json
 from enum import Enum
 
 from aiogram import Bot, md
+from aiogram.exceptions import TelegramBadRequest
 from openai import AsyncOpenAI, OpenAIError
 
 import text
@@ -138,7 +139,10 @@ async def notify_admin_about_new_client(user_data, bot: Bot):
     message = f'У вас новый клиент! \n'
     for key, value in user_data.items():
         message += f'{key}: {value} \n'
-    await bot.send_message(chat_id=int(admin_id), text=message)
+    try:
+        await bot.send_message(chat_id=int(admin_id), text=message)
+    except TelegramBadRequest as e:
+        logger.warning(f"failed to notify admin: {e.message}")
 
 
 async def check_if_user_can_start_survey(user_id: int):
@@ -250,3 +254,10 @@ async def clear_pending_conception_generation(bot):
         logger.info('Notifying pending users')
         await notify_pending_users(updated_users, bot)
     logger.info('Clearing finished')
+
+
+async def delete_tg_message(chat_id: int | str, message_id: int, bot: Bot):
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except TelegramBadRequest as e:
+        logger.warning(f"failed to delete message: {e.message}")

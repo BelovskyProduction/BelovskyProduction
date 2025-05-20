@@ -13,7 +13,7 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
     send_next_question, get_event_conception, format_conception, get_next_chat_question, \
-    get_chat_question_number, get_question_answer_type, unite_questions_and_answers
+    get_chat_question_number, get_question_answer_type, unite_questions_and_answers, delete_tg_message
 from utils import format_message
 from validator import AnswerValidator
 
@@ -56,7 +56,7 @@ async def chat_question_answer_handler(msg: Message, state: FSMContext, bot: Bot
     await msg.delete()
     if 'message_to_delete' in state_data:
         message_id = state_data.pop('message_to_delete')
-        await bot.delete_message(chat_id=msg.chat.id, message_id=message_id)
+        await delete_tg_message(chat_id=msg.chat.id, message_id=message_id, bot=bot)
     current_question_number, user_data = state_data.get('last_question_number'), state_data.get('user_data')
     answer_type = get_question_answer_type(current_question_number)
     validated, error_message = AnswerValidator.validate(answer, answer_type)
@@ -150,7 +150,7 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
     event_type = state_data.get('user_data').get('Мероприятие')
     if 'message_to_delete' in state_data:
         message_id = state_data.pop('message_to_delete')
-        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+        await delete_tg_message(chat_id=chat_id, message_id=message_id, bot=bot)
     current_question_number, survey_answers = state_data.get('last_question_number'), state_data.get('survey_answers')
     answer_type = get_question_answer_type(current_question_number, event_type)
     validated, error_message = AnswerValidator.validate(answer, answer_type)
@@ -237,7 +237,7 @@ async def survey_edit_question_answer_handler(msg: Message | CallbackQuery, stat
     event_type = state_data.get('user_data').get('Мероприятие')
     if 'message_to_delete' in state_data:
         message_id = state_data.pop('message_to_delete')
-        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+        await delete_tg_message(chat_id=chat_id, message_id=message_id, bot=bot)
     edit_msg_id = state_data.get('edited_msg_id')
     questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'), without_question_data=True)
     edited_question_number, survey_answers = state_data.get('edited_question_number'), state_data.get('survey_answers')
