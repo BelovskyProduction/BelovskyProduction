@@ -13,9 +13,8 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
     send_next_question, get_event_conception, format_conception, get_next_chat_question, \
-    get_chat_question_number, get_question_answer_type, unite_questions_and_answers, delete_tg_message
+    get_chat_question_number, unite_questions_and_answers, delete_tg_message, validate_answer
 from utils import format_message
-from validator import AnswerValidator
 
 router = Router()
 
@@ -58,12 +57,9 @@ async def chat_question_answer_handler(msg: Message, state: FSMContext, bot: Bot
         message_id = state_data.pop('message_to_delete')
         await delete_tg_message(chat_id=msg.chat.id, message_id=message_id, bot=bot)
     current_question_number, user_data = state_data.get('last_question_number'), state_data.get('user_data')
-    answer_type = get_question_answer_type(current_question_number)
-    validated, error_message = AnswerValidator.validate(answer, answer_type)
-    if not validated:
-        error_message = await bot.send_message(chat_id=msg.chat.id, text=error_message)
-        return await state.update_data(message_to_delete=error_message.message_id)
-
+    if not await validate_answer(chat_id=msg.chat.id, question_number=current_question_number, answer=answer,
+                                 state=state, bot=bot):
+        return None
     user_data.update({user_data_map.get(current_question_number): answer})
     await state.update_data(user_data=user_data)
 
@@ -152,11 +148,9 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
         message_id = state_data.pop('message_to_delete')
         await delete_tg_message(chat_id=chat_id, message_id=message_id, bot=bot)
     current_question_number, survey_answers = state_data.get('last_question_number'), state_data.get('survey_answers')
-    answer_type = get_question_answer_type(current_question_number, event_type)
-    validated, error_message = AnswerValidator.validate(answer, answer_type)
-    if not validated:
-        error_message = await bot.send_message(chat_id=msg.chat.id, text=error_message)
-        return await state.update_data(message_to_delete=error_message.message_id)
+    if not await validate_answer(chat_id=chat_id, question_number=current_question_number, answer=answer,
+                                 state=state, bot=bot, event_type=event_type):
+        return None
     survey_answers.update({str(current_question_number): answer})
 
     if current_question_number != get_survey_question_number(event_type):
@@ -241,11 +235,9 @@ async def survey_edit_question_answer_handler(msg: Message | CallbackQuery, stat
     edit_msg_id = state_data.get('edited_msg_id')
     questions = get_survey_questions(state_data.get('user_data').get('Мероприятие'), without_question_data=True)
     edited_question_number, survey_answers = state_data.get('edited_question_number'), state_data.get('survey_answers')
-    answer_type = get_question_answer_type(int(edited_question_number), event_type)
-    validated, error_message = AnswerValidator.validate(answer, answer_type)
-    if not validated:
-        error_message = await bot.send_message(chat_id=msg.chat.id, text=error_message)
-        return await state.update_data(message_to_delete=error_message.message_id)
+    if not await validate_answer(chat_id=chat_id, question_number=edited_question_number, answer=answer,
+                                 state=state, bot=bot, event_type=event_type):
+        return None
     survey_answers.update({str(edited_question_number): answer})
     await state.set_state(SurveyState.survey_started)
     await state.update_data(survey_answers=survey_answers)

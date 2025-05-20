@@ -1,4 +1,5 @@
 import re
+from enum import Enum
 
 from typing import Any
 from typing_extensions import Self
@@ -7,7 +8,15 @@ from pydantic import BaseModel, Field, ValidationError, field_validator, EmailSt
 from pydantic_core import PydanticCustomError
 
 import text
-from service import AnswerTypes
+
+
+class AnswerTypes(Enum):
+    email = 'email'
+    phone = 'phone'
+    text = 'text'
+    large_text = 'large_text'
+    age = 'age'
+    number = 'number'
 
 
 error_messages = {

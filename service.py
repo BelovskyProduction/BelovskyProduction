@@ -7,6 +7,7 @@ from enum import Enum
 
 from aiogram import Bot, md
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.context import FSMContext
 from openai import AsyncOpenAI, OpenAIError
 
 import text
@@ -14,15 +15,7 @@ from database import get_collection, SURVEYS, STATE_DATA
 from datetime import datetime
 
 from keyboard import generate_question_answer_menu, main_menu
-
-
-class AnswerTypes(Enum):
-    email = 'email'
-    phone = 'phone'
-    text = 'text'
-    large_text = 'large_text'
-    age = 'age'
-    number = 'number'
+from validator import AnswerValidator, AnswerTypes
 
 
 survey_questions = {
@@ -257,7 +250,34 @@ async def clear_pending_conception_generation(bot):
 
 
 async def delete_tg_message(chat_id: int | str, message_id: int, bot: Bot):
+    """
+    Safely delete tg message
+    :param chat_id: telegram chat id
+    :param message_id: message id in chat
+    :param bot: aiogram bot instance
+    :return: None
+    """
     try:
         await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except TelegramBadRequest as e:
         logger.warning(f"failed to delete message: {e.message}")
+
+
+async def validate_answer(chat_id: int, question_number: int | str, answer: str, state: FSMContext, bot: Bot,
+                          event_type: str | None = None) -> bool:
+    """
+    Validates question answer. If answer incorrect notifies user.
+    :param chat_id: telegram chat id
+    :param question_number: question to which user answers
+    :param answer: question answer
+    :param state: FSM user state
+    :param bot: aiogram bot instance
+    :param event_type: type of event
+    :return: validation result
+    """
+    answer_type = get_question_answer_type(int(question_number), event_type)
+    validated, error_message = AnswerValidator.validate(answer, answer_type)
+    if not validated:
+        error_message = await bot.send_message(chat_id=chat_id, text=error_message)
+        await state.update_data(message_to_delete=error_message.message_id)
+    return validated
