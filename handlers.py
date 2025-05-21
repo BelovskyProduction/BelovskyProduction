@@ -13,7 +13,7 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
     send_next_question, get_event_conception, format_conception, get_next_chat_question, \
-    get_chat_question_number, unite_questions_and_answers, delete_tg_message, validate_answer
+    get_chat_question_number, unite_questions_and_answers, delete_tg_message, validate_answer, process_message
 from utils import format_message
 
 router = Router()
@@ -135,13 +135,7 @@ async def start_survey_handler(msg: Message, state: FSMContext, bot: Bot):
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('answer_'))
 @router.message(StateFilter(SurveyState.survey_started))
 async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FSMContext, bot: Bot):
-    if isinstance(msg, Message):
-        answer = msg.text
-        chat_id = msg.chat.id
-        await msg.delete()
-    else:
-        answer = msg.data.split('_')[-1]
-        chat_id = msg.message.chat.id
+    answer, chat_id = await process_message(message=msg, bot=bot)
     state_data = await state.get_data()
     event_type = state_data.get('user_data').get('Мероприятие')
     if 'message_to_delete' in state_data:
@@ -220,13 +214,7 @@ async def edit_button_handler(callback: CallbackQuery, state: FSMContext, bot: B
 @router.callback_query(StateFilter(SurveyState.survey_editing))
 @router.message(StateFilter(SurveyState.survey_editing))
 async def survey_edit_question_answer_handler(msg: Message | CallbackQuery, state: FSMContext, bot: Bot):
-    if isinstance(msg, Message):
-        answer = msg.text
-        chat_id = msg.chat.id
-        await msg.delete()
-    else:
-        answer = msg.data.split('_')[-1]
-        chat_id = msg.message.chat.id
+    answer, chat_id = await process_message(message=msg, bot=bot)
     state_data = await state.get_data()
     event_type = state_data.get('user_data').get('Мероприятие')
     if 'message_to_delete' in state_data:

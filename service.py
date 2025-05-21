@@ -8,6 +8,7 @@ from enum import Enum
 from aiogram import Bot, md
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
+from aiogram.types import Message, CallbackQuery
 from openai import AsyncOpenAI, OpenAIError
 
 import text
@@ -281,3 +282,20 @@ async def validate_answer(chat_id: int, question_number: int | str, answer: str,
         error_message = await bot.send_message(chat_id=chat_id, text=error_message)
         await state.update_data(message_to_delete=error_message.message_id)
     return validated
+
+
+async def process_message(message: Message | CallbackQuery, bot: Bot) -> tuple[str, int]:
+    """
+    Processes user message to receive answer to question. If message type is Aiogram.Message than also deleting it from chat
+    :param message: User message
+    :param bot: Aiogram bot instance
+    :return: chat id and answer
+    """
+    if isinstance(message, Message):
+        answer = message.text
+        chat_id = message.chat.id
+        await delete_tg_message(chat_id=chat_id, message_id=message.message_id, bot=bot)
+    else:
+        answer = message.data.split('_')[-1]
+        chat_id = message.message.chat.id
+    return answer, chat_id
