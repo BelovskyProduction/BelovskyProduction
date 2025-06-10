@@ -3,16 +3,18 @@ import functools
 import os
 import logging
 import json
-from enum import Enum
+from bson import ObjectId
 
 from aiogram import Bot, md
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from openai import AsyncOpenAI, OpenAIError
+from pymongo.results import InsertOneResult
+from pymongo.synchronous.collection import Collection
 
 import text
-from database import get_collection, SURVEYS, STATE_DATA
+from database import get_collection, SURVEYS, STATE_DATA, USERS, EVENT_ORDERS
 from datetime import datetime
 
 from keyboard import generate_question_answer_menu, main_menu
@@ -159,6 +161,18 @@ def unite_questions_and_answers(questions, answers):
     for question, answer in zip(questions.values(), answers.values()):
         united_answers.update({question: answer})
     return united_answers
+
+
+async def save_to_db(collection: Collection, data: dict) -> InsertOneResult:
+    result = collection.insert_one(data)
+    return result
+
+
+async def save_user_to_db(user_data: dict) -> ObjectId:
+    current_date = datetime.now().strftime('%d %b %Y %H:%M:%S')
+    collection = get_collection(USERS)
+    result = await save_to_db(collection, {**user_data, 'registration_date': current_date})
+    return result.inserted_id
 
 
 async def save_survey_to_db(user_id, survey_data, questions, user_data, conception):

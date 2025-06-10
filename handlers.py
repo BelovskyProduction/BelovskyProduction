@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram import F
+from pymongo.errors import PyMongoError
 
 import text
 from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, generate_event_type_menu,\
@@ -13,7 +14,8 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
     send_next_question, get_event_conception, format_conception, get_next_chat_question, \
-    get_chat_question_number, unite_questions_and_answers, delete_tg_message, validate_answer, process_message
+    get_chat_question_number, unite_questions_and_answers, delete_tg_message, validate_answer, process_message, \
+    save_user_to_db
 from utils import format_message
 
 router = Router()
@@ -44,7 +46,7 @@ async def start_handler(msg: Message, state: FSMContext):
         await msg.answer(text=message, reply_markup=ReplyKeyboardRemove())
         question = get_next_chat_question(question_number)
         send_question = await msg.answer(text=question)
-        await state.update_data(user_id=msg.from_user.id, last_question_number=question_number, user_data={},
+        await state.update_data(last_question_number=question_number, user_data={},
                                 message_to_delete=send_question.message_id)
 
 
@@ -70,8 +72,13 @@ async def chat_question_answer_handler(msg: Message, state: FSMContext, bot: Bot
         await state.update_data(last_question_number=current_question_number,
                                 message_to_delete=send_question.message_id)
     else:
-        menu = generate_event_type_menu(event_types)
-        await msg.answer(text=text.event_choose_message, reply_markup=menu.as_markup(), parse_mode='Markdown')
+        try:
+            user_id = await save_user_to_db({'telegram_id': msg.from_user.id, **user_data})
+            await state.update_data(user_id=user_id)
+            menu = generate_event_type_menu(event_types)
+            await msg.answer(text=text.event_choose_message, reply_markup=menu.as_markup(), parse_mode='Markdown')
+        except PyMongoError:
+            await msg.answer(text=text.answer_default_message)
 
 
 @router.callback_query(StateFilter(SurveyState.chat_started), F.data.startswith('event_'))
@@ -163,9 +170,9 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
 
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('surveymenu_confirm'))
 async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    user_id = callback.from_user.id
     chat_id = callback.message.chat.id
     state_data = await state.get_data()
+    user_id = state_data.get('user_id')
     event_type = state_data.get('user_data').get('Мероприятие')
     survey_answers = state_data.get('survey_answers')
     questions = get_survey_questions(event_type, without_question_data=True)
