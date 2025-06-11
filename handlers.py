@@ -15,7 +15,7 @@ from service import save_survey_to_db, generate_survey_confirm_text, check_if_us
     notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
     send_next_question, get_event_conception, format_conception, get_next_chat_question, \
     get_chat_question_number, unite_questions_and_answers, delete_tg_message, validate_answer, process_message, \
-    save_user_to_db
+    save_user_to_db, save_event_order_to_db
 from utils import format_message
 
 router = Router()
@@ -87,6 +87,13 @@ async def event_type_handler(callback: CallbackQuery, state: FSMContext, bot: Bo
 
     event_type = callback.data.split('_')[-1]
     state_data = await state.get_data()
+    try:
+        await save_event_order_to_db(state_data.get('user_id'), event_type)
+    except PyMongoError:
+        menu = generate_event_type_menu(event_types)
+        return await bot.send_message(chat_id=callback.message.chat.id, text=text.answer_default_message,
+                                      reply_markup=menu.as_markup())
+
     user_data = state_data.get('user_data')
     user_data.update({'Мероприятие': event_type})
     await state.update_data(user_data=user_data)

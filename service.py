@@ -175,6 +175,12 @@ async def save_user_to_db(user_data: dict) -> ObjectId:
     return result.inserted_id
 
 
+async def save_event_order_to_db(user_id: ObjectId, event_type: str):
+    current_data = datetime.now().strftime('%d %b %Y %H:%M:%S')
+    collection = get_collection(EVENT_ORDERS)
+    await save_to_db(collection, {'user_id': user_id, 'event_type': event_type, 'order_date': current_data})
+
+
 async def save_survey_to_db(user_id, survey_data, questions, user_data, conception):
     collection = get_collection(SURVEYS)
     current_date = datetime.now().strftime('%d %b %Y %H:%M:%S')
