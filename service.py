@@ -181,12 +181,12 @@ async def save_event_order_to_db(user_id: ObjectId, event_type: str):
     await save_to_db(collection, {'user_id': user_id, 'event_type': event_type, 'order_date': current_data})
 
 
-async def save_survey_to_db(user_id, survey_data, questions, user_data, conception):
+async def save_survey_to_db(user_id: ObjectId, survey_data: dict, questions: dict, event_type: str, conception: dict):
     collection = get_collection(SURVEYS)
     current_date = datetime.now().strftime('%d %b %Y %H:%M:%S')
     answers = unite_questions_and_answers(questions, survey_data)
-    data = {'user_id': user_id, **user_data, 'answers': answers, 'conception': conception, 'created_at': current_date}
-    collection.insert_one(data)
+    data = {'user_id': user_id, 'event_type': event_type, 'answers': answers, 'conception': conception, 'created_at': current_date}
+    await save_to_db(collection, data)
 
 
 def get_survey_questions(event_type: str, without_question_data=False):
