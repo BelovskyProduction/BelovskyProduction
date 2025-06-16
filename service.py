@@ -141,7 +141,7 @@ async def notify_admin_about_new_client(user_data, bot: Bot):
         logger.warning(f"failed to notify admin: {e.message}")
 
 
-async def check_if_user_can_start_survey(user_id: int):
+async def check_if_user_can_start_survey(user_id: ObjectId):
     collection = get_collection(SURVEYS)
     maximum_surveys = int(os.getenv('MAX_SURVEYS_NUMBER'))
     surveys_done_by_user = collection.count_documents({'user_id': user_id})

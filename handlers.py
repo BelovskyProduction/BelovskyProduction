@@ -134,17 +134,26 @@ async def start_survey_handler(msg: Message, state: FSMContext, bot: Bot):
     current_state = await state.get_state()
 
     if current_state in [SurveyState.ready_to_survey.state]:
-        if not await check_if_user_can_start_survey(msg.from_user.id):
+        data = await state.get_data()
+        if not await check_if_user_can_start_survey(data.get('user_id')):
             return await msg.answer(text=text.surveys_limit_reached)
 
-        question_number = 1
         await state.set_state(SurveyState.survey_started)
-        state_data = await state.get_data()
-        event_type = state_data.get('event_type')
-        question_message_id = await send_next_question(event_type=event_type, question_number=question_number,
-                                                       chat_id=msg.chat.id, bot=bot)
-        await state.update_data(last_question_number=question_number, survey_answers={},
-                                message_to_delete=question_message_id)
+        events = [event for event in event_types if event != 'Другое']
+        menu = generate_event_type_menu(events)
+        await msg.answer(text=text.event_choose_message, reply_markup=menu.as_markup(), parse_mode='Markdown')
+
+
+@router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('event_'))
+async def survey_event_type_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
+
+    event_type = callback.data.split('_')[-1]
+    question_number = 1
+    question_message_id = await send_next_question(event_type=event_type, question_number=question_number,
+                                                   chat_id=callback.message.chat.id, bot=bot)
+    await state.update_data(last_question_number=question_number, survey_answers={},
+                            message_to_delete=question_message_id, event_type=event_type)
 
 
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('answer_'))
