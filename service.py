@@ -29,7 +29,7 @@ survey_questions = {
          4: {'question': 'Какие увлечения/хобби?', 'type': AnswerTypes.large_text},
          5: {'question': 'Любимый цвет?', 'type': AnswerTypes.text},
          6: {'question': 'Любимые исполнители?', 'type': AnswerTypes.text},
-         7: {'question': 'Предпочтительный стиль проведения мероприятия?', 'type': AnswerTypes.text},
+         7: {'question': 'Предпочтительный стиль мероприятия(оформление)?', 'type': AnswerTypes.text},
          8: {'question': 'Любимое время года?', 'type': AnswerTypes.text},
          9: {'question': 'Любимая марка авто?', 'type': AnswerTypes.text}},
     'День рождения':
