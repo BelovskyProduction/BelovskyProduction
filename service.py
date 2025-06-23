@@ -99,7 +99,10 @@ async def format_conception(conception: str, event_type: str) -> (str, dict):
     try:
         conception = clean_json_block(conception)
         json_conception = json.loads(conception)
-        user_conception_keys = prompt_details.get(event_type)[0:4]
+        if os.getenv('SEND_FULL_CONCEPTION') == 'True':
+            user_conception_keys = prompt_details.get(event_type)
+        else:
+            user_conception_keys = prompt_details.get(event_type)[0:4]
         user_conception_format = text.conception_message + ''.join(f'\n\n\t *{key}*: {json_conception.get(key, None)}'
                                                                    for key in user_conception_keys)
         return user_conception_format, json_conception
