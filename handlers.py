@@ -13,8 +13,8 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
     survey_request_menu
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
-    send_next_question, get_event_conception, format_conception, get_next_chat_question, \
-    get_chat_question_number, unite_questions_and_answers, delete_tg_message, validate_answer, process_message, \
+    send_next_question, get_event_conception, format_conception, get_next_user_registration_question, \
+    get_user_registration_questions_number, unite_questions_and_answers, delete_tg_message, validate_answer, process_message, \
     save_user_to_db, save_event_order_to_db
 from utils import format_message
 
@@ -44,14 +44,14 @@ async def start_handler(msg: Message, state: FSMContext):
         message = format_message(text.welcome_message, username=msg.from_user.username)
         await state.set_state(SurveyState.chat_started)
         await msg.answer(text=message, reply_markup=ReplyKeyboardRemove())
-        question = get_next_chat_question(question_number)
+        question = get_next_user_registration_question(question_number)
         send_question = await msg.answer(text=question)
         await state.update_data(last_question_number=question_number, user_data={},
                                 message_to_delete=send_question.message_id)
 
 
 @router.message(StateFilter(SurveyState.chat_started.state))
-async def chat_question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
+async def registration_question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
     answer = msg.text
     state_data = await state.get_data()
     await msg.delete()
@@ -65,9 +65,9 @@ async def chat_question_answer_handler(msg: Message, state: FSMContext, bot: Bot
     user_data.update({user_data_map.get(current_question_number): answer})
     await state.update_data(user_data=user_data)
 
-    if current_question_number != get_chat_question_number():
+    if current_question_number != get_user_registration_questions_number():
         current_question_number += 1
-        question = get_next_chat_question(current_question_number)
+        question = get_next_user_registration_question(current_question_number)
         send_question = await msg.answer(text=question)
         await state.update_data(last_question_number=current_question_number,
                                 message_to_delete=send_question.message_id)

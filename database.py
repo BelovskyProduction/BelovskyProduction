@@ -1,12 +1,10 @@
-import os
 from pymongo import MongoClient
-from dotenv import load_dotenv
+from config import MONGO_URL, MONGO_DB_NAME
 
-load_dotenv()
 
 #todo: maybe change to AsyncClient
-client = MongoClient(os.getenv('MONGO_URL'))
-db = client[os.getenv('MONGO_DB_NAME')]
+client = MongoClient(MONGO_URL)
+db = client[MONGO_DB_NAME]
 
 SURVEYS = 'surveys'
 USERS = 'users'

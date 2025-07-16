@@ -1,20 +1,20 @@
 import asyncio
 import logging
-import os
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.mongo import MongoStorage
 
+from config import BOT_TOKEN, MONGO_URL, MONGO_DB_NAME
 from handlers import router
 from service import clear_pending_conception_generation
 
 
 def get_mongo_storage():
-    return MongoStorage.from_url(url=os.getenv('MONGO_URL'), db_name=os.getenv('MONGO_DB_NAME'))
+    return MongoStorage.from_url(url=MONGO_URL, db_name=MONGO_DB_NAME)
 
 
 async def main():
-    bot = Bot(token=os.getenv('BOT_TOKEN'))
+    bot = Bot(token=BOT_TOKEN)
     storage = get_mongo_storage()
     dp = Dispatcher(storage=storage)
     dp.include_router(router)

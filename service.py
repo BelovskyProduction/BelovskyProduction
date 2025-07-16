@@ -17,6 +17,7 @@ import text
 from database import get_collection, SURVEYS, STATE_DATA, USERS, EVENT_ORDERS
 from datetime import datetime
 
+from config import REGISTRATION_QUESTIONS
 from keyboard import generate_question_answer_menu, main_menu
 from validator import AnswerValidator, AnswerTypes
 
@@ -55,9 +56,6 @@ survey_questions = {
          5: {'question': 'Время проведения(месяц)?', 'type': AnswerTypes.text},
          6: {'question': 'Цель конференции?', 'type': AnswerTypes.text}}
 }
-
-chat_questions = {1: {'question': 'Как тебя зовут?', 'type': AnswerTypes.text},
-                  2: {'question': 'Номер телефона для связи?', 'type': AnswerTypes.phone}}
 
 prompt_details = {'Конференция': ['Название конференции', 'Целевая аудитория',
                                   'Программа мероприятия', 'Дополнительные элементы', 'Маркетинг и продвижение',
@@ -199,8 +197,8 @@ def get_survey_questions(event_type: str, without_question_data=False):
     return questions
 
 
-def get_next_chat_question(question_number: int):
-    question_data = chat_questions.get(question_number, {})
+def get_next_user_registration_question(question_number: int):
+    question_data = REGISTRATION_QUESTIONS.get(question_number, {})
     return question_data.get('question', None)
 
 
@@ -215,7 +213,7 @@ def get_question_answer_type(question_number: int, event_type: str = None):
     if event_type:
         questions = get_survey_questions(event_type)
     else:
-        questions = chat_questions
+        questions = REGISTRATION_QUESTIONS
     question_data = questions.get(question_number)
     return question_data.get('type')
 
@@ -224,8 +222,8 @@ def get_survey_question_number(event_type: str):
     return len(survey_questions.get(event_type, {}))
 
 
-def get_chat_question_number():
-    return len(chat_questions)
+def get_user_registration_questions_number():
+    return len(REGISTRATION_QUESTIONS)
 
 
 async def send_next_question(event_type, question_number, chat_id, bot: Bot):
