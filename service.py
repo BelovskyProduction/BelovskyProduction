@@ -17,45 +17,10 @@ import text
 from database import get_collection, SURVEYS, STATE_DATA, USERS, EVENT_ORDERS
 from datetime import datetime
 
-from config import REGISTRATION_QUESTIONS
+from config import REGISTRATION_QUESTIONS, SURVEY_QUESTIONS
 from keyboard import generate_question_answer_menu, main_menu
-from validator import AnswerValidator, AnswerTypes
+from validator import AnswerValidator
 
-
-survey_questions = {
-    'Свадьба':
-        {1: {'question': 'Как зовут молодоженов?', 'type': AnswerTypes.text},
-         2: {'question': 'Сколько лет?', 'type': AnswerTypes.text},
-         3: {'question': 'Как познакомились?', 'type': AnswerTypes.large_text},
-         4: {'question': 'Какие увлечения/хобби?', 'type': AnswerTypes.large_text},
-         5: {'question': 'Любимый цвет?', 'type': AnswerTypes.text},
-         6: {'question': 'Любимые исполнители?', 'type': AnswerTypes.text},
-         7: {'question': 'Предпочтительный стиль мероприятия(оформление)?', 'type': AnswerTypes.text},
-         8: {'question': 'Любимое время года?', 'type': AnswerTypes.text},
-         9: {'question': 'Любимая марка авто?', 'type': AnswerTypes.text}},
-    'День рождения':
-        {1: {'question': 'Как зовут именинника?', 'type': AnswerTypes.text},
-         2: {'question': 'Cколько исполняется лет?', 'type': AnswerTypes.age},
-         3: {'question': 'Любимый цвет?', 'type': AnswerTypes.text},
-         4: {'question': 'Сфера деятельности?', 'type': AnswerTypes.text},
-         5: {'question': 'Любимое хобби?', 'type': AnswerTypes.text},
-         6: {'question': 'Любимый исполнитель?', 'type': AnswerTypes.text}},
-    'Корпоратив':
-        {1: {'question': 'Название компании?', 'type': AnswerTypes.text},
-         2: {'question': 'Сфера деятельности?', 'type': AnswerTypes.text},
-         3: {'question': 'Количество сотрудников?', 'type': AnswerTypes.number},
-         4: {'question': 'Формат Корпоратива?', 'type': AnswerTypes.text,
-             'variants': ['Отдых на природе', 'Ресторан и шоу программа']},
-         5: {'question': 'Тематический или деловой корпоратив?', 'type': AnswerTypes.text,
-             'variants': ['Тематический', 'Деловой']}},
-    'Конференция':
-        {1: {'question': 'Название конференции?', 'type': AnswerTypes.text},
-         2: {'question': 'Тема конференции?', 'type': AnswerTypes.text},
-         3: {'question': 'Количество компаний учавствующих в конференции?', 'type': AnswerTypes.number},
-         4: {'question': 'Место проведения?', 'type': AnswerTypes.text},
-         5: {'question': 'Время проведения(месяц)?', 'type': AnswerTypes.text},
-         6: {'question': 'Цель конференции?', 'type': AnswerTypes.text}}
-}
 
 prompt_details = {'Конференция': ['Название конференции', 'Целевая аудитория',
                                   'Программа мероприятия', 'Дополнительные элементы', 'Маркетинг и продвижение',
@@ -191,7 +156,7 @@ async def save_survey_to_db(user_id: ObjectId, survey_data: dict, questions: dic
 
 
 def get_survey_questions(event_type: str, without_question_data=False):
-    questions = survey_questions.get(event_type, {})
+    questions = SURVEY_QUESTIONS.get(event_type, {})
     if without_question_data:
         questions = {q_number: q_data.get('question') for q_number, q_data in questions.items()}
     return questions
@@ -219,7 +184,7 @@ def get_question_answer_type(question_number: int, event_type: str = None):
 
 
 def get_survey_question_number(event_type: str):
-    return len(survey_questions.get(event_type, {}))
+    return len(SURVEY_QUESTIONS.get(event_type, {}))
 
 
 def get_user_registration_questions_number():
