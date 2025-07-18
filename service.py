@@ -17,20 +17,9 @@ import text
 from database import get_collection, SURVEYS, STATE_DATA, USERS, EVENT_ORDERS
 from datetime import datetime
 
-from config import REGISTRATION_QUESTIONS, SURVEY_QUESTIONS
+from config import REGISTRATION_QUESTIONS, SURVEY_QUESTIONS, CONCEPTION_CONTENT
 from keyboard import generate_question_answer_menu, main_menu
 from validator import AnswerValidator
-
-
-prompt_details = {'Конференция': ['Название конференции', 'Целевая аудитория',
-                                  'Программа мероприятия', 'Дополнительные элементы', 'Маркетинг и продвижение',
-                                  'Ожидаемые результаты'],
-                  'Корпоратив': ['Название мероприятия', 'Цель мероприятия', 'Тематика',
-                                 'Программа мероприятия', 'Дополнительные элементы'],
-                  'День рождения': ['Тема мероприятия', 'Место', 'Оформление', 'Угощения', 'Программа мероприятия',
-                                    'Подарки'],
-                  'Свадьба': ['Общая идея', 'Тематика и атмосфера', 'Декор', 'Свадебный торт', 'Место проведения',
-                              'Программа', 'Кулинарное меню', 'Дресс-код', 'Приглашение', 'Задачи ведущего']}
 
 
 logger = logging.getLogger()
@@ -43,7 +32,7 @@ def get_open_ai_client() -> AsyncOpenAI:
 
 def get_prompt(event_type, survey_answers):
     user_content = f"Сгенерируй концепцию для мероприятия типа: '{event_type}' на основе следующих ответов: {survey_answers}. " \
-                   f"Ответ должен содержать только следующие пункты: {prompt_details.get(event_type)}. " \
+                   f"Ответ должен содержать только следующие пункты: {CONCEPTION_CONTENT.get(event_type)}. " \
                    f"Значение пунктов должно быть в виде текста"
     prompt = {'model': os.getenv('LLM_MODEL'), 'response_format': {'type': 'json_object'}}
     messages = [{'role': "system", "content": "You are a helpful assistant. You response in JSON format"},
@@ -63,9 +52,9 @@ async def format_conception(conception: str, event_type: str) -> (str, dict):
         conception = clean_json_block(conception)
         json_conception = json.loads(conception)
         if os.getenv('SEND_FULL_CONCEPTION') == 'True':
-            user_conception_keys = prompt_details.get(event_type)
+            user_conception_keys = CONCEPTION_CONTENT.get(event_type)
         else:
-            user_conception_keys = prompt_details.get(event_type)[0:4]
+            user_conception_keys = CONCEPTION_CONTENT.get(event_type)[0:4]
         user_conception_format = text.conception_message + ''.join(f'\n\n\t *{key}*: {json_conception.get(key, None)}'
                                                                    for key in user_conception_keys)
         return user_conception_format, json_conception
