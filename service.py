@@ -1,5 +1,4 @@
 import asyncio
-import functools
 import os
 import logging
 import json
@@ -8,7 +7,7 @@ from bson import ObjectId
 from aiogram import Bot, md
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from openai import AsyncOpenAI, OpenAIError
+from openai import OpenAIError
 from pymongo.results import InsertOneResult
 from pymongo.synchronous.collection import Collection
 
@@ -19,14 +18,10 @@ from datetime import datetime
 from config import REGISTRATION_QUESTIONS, SURVEY_QUESTIONS, CONCEPTION_CONTENT
 from keyboard import generate_question_answer_menu, main_menu
 from validator import AnswerValidator
+from utils import get_open_ai_client
 
 
 logger = logging.getLogger()
-
-
-@functools.lru_cache(maxsize=1)
-def get_open_ai_client() -> AsyncOpenAI:
-    return AsyncOpenAI(api_key=os.getenv('OPEN_AI_TOKEN'), base_url=os.getenv('BASE_AI_URL'), max_retries=0)
 
 
 def get_prompt(event_type, survey_answers):

@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram import F
 
+import text
 from user_states import AdvertisingStates, SurveyState
 from utils import process_message, delete_tg_message
 
@@ -21,10 +22,9 @@ async def start_advertising_survey_handler(msg: Message, state: FSMContext, bot:
     if current_state in [SurveyState.ready_to_survey.state]:
         chat_id = msg.chat.id
         data = await state.get_data()
-        print('here')
-        # if not await check_if_user_can_start_survey(data.get('user_id')):
-        #     return await msg.answer(text=text.surveys_limit_reached)
-        #
+        if data.get('advertise_survey_passed'):
+            return await msg.answer(text=text.advertising_survey_already_passed)
+
         await state.set_state(AdvertisingStates.advertising_survey_started)
         starting_question_number = 1
         question_message_id = await send_next_question(question_number=starting_question_number,
@@ -56,5 +56,6 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
                                 message_to_delete=question_message_id)
     else:
         await state.update_data(advertising_survey_answers=survey_answers)
-        await bot.send_message(chat_id=chat_id, text='done')
-        # await bot.send_message(chat_id=chat_id, text=message, reply_markup=survey_confirm_menu, parse_mode='Markdown')
+        await state.set_state(SurveyState.ready_to_survey)
+        await state.update_data(advertise_survey_passed=True)
+        await bot.send_message(chat_id=chat_id, text=text.advertising_survey_passed)

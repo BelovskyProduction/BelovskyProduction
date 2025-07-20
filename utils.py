@@ -1,10 +1,18 @@
+import functools
 import logging
+import os
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery
+from openai import AsyncOpenAI
 
 logger = logging.getLogger()
+
+
+@functools.lru_cache(maxsize=1)
+def get_open_ai_client() -> AsyncOpenAI:
+    return AsyncOpenAI(api_key=os.getenv('OPEN_AI_TOKEN'), base_url=os.getenv('BASE_AI_URL'), max_retries=0)
 
 
 def format_message(message: str, **kwargs):
