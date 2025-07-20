@@ -58,6 +58,42 @@ SURVEY_QUESTIONS = {
          6: {'question': 'Цель конференции?', 'type': AnswerTypes.text}}
 }
 
+ADVERTISING_QUESTIONS = {
+    1: {'question': 'Название компании/бренда', 'type': AnswerTypes.text},
+    2: {'question': 'Сфера деятельности?',
+        'clarification': 'чем занимаетесь, какие товары/услуги предлагаете', 'type': AnswerTypes.large_text},
+    3: {'question': 'Каковы основные уникальные торговые предложения(УТП) вашего продукта/услуги?',
+        'type': AnswerTypes.large_text},
+    4: {'question': 'Есть ли у вас фирменный стиль?', 'clarification': 'логотип, цвета, шрифты, слоганы',
+        'type': AnswerTypes.text},
+    5: {'question': 'Какова основная цель рекламы?',
+        'clarification': 'увеличение продаж, повышение узнаваемости бренда, привлечение трафика, '
+                         'продвижение конкретного товара/услуги и т.д.', 'type': AnswerTypes.text},
+    6: {'question': 'Какие рекламные каналы вас интересуют?',
+        'clarification': 'соцсети, контекстная реклама, таргетированная реклама, баннеры, ТВ, радио, '
+                         'наружная реклама и т.д.', 'type': AnswerTypes.text},
+    7: {'question': 'Кто ваша целевая аудитория?',
+        'clarification': 'пол, возраст, география, доход, интересы, профессия и т.д.', 'type': AnswerTypes.large_text},
+    8: {'question': 'Какие боли/потребности вашей ЦА решает ваш продукт/услуга?', 'type': AnswerTypes.large_text},
+    9: {'question': 'Где ваша ЦА проводит время онлайн/оффлайн?', 'type': AnswerTypes.large_text},
+    10: {'question': 'Какой бюджет вы готовы выделить на рекламу?', 'type': AnswerTypes.text},
+    11: {'question': 'На какой срок планируется рекламная кампания?', 'type': AnswerTypes.text},
+    12: {'question': 'Есть ли сезонность или особые даты, на которые нужно сделать акцент?', 'type': AnswerTypes.text},
+    13: {'question': 'Кто ваши основные конкуренты?', 'type': AnswerTypes.large_text},
+    14: {'question': 'Есть ли у вас примеры рекламы конкурентов, которая вам нравится/не нравится?',
+        'type': AnswerTypes.large_text},
+    15: {'question': 'Какие ключевые преимущества выделяют вас на фоне конкурентов?', 'type': AnswerTypes.large_text},
+    16: {'question': 'Есть ли у вас готовые материалы для работы?', 'clarification': 'фото, видео, тексты',
+        'type': AnswerTypes.text},
+    17: {'question': 'Предпочитаемый стиль коммуникации?',
+        'clarification': 'строгий, дружелюбный, юмористический, экспертный и т.д.', 'type': AnswerTypes.text},
+    18: {'question': 'Есть ли ограничения по подаче?',
+        'clarification': 'например, нельзя использовать определенные цвета, образы', 'type': AnswerTypes.large_text},
+    19: {'question': 'Был ли у вас опыт запуска рекламы ранее? Какие результаты?', 'type': AnswerTypes.large_text},
+    20: {'question': 'Какие ошибки или проблемы вы хотели бы избежать в новой кампании?', 'type': AnswerTypes.large_text},
+    21: {'question': 'Есть ли дополнительные требования или пожелания?', 'type': AnswerTypes.large_text},
+}
+
 # prompt config
 CONCEPTION_CONTENT = {'Конференция': ['Название конференции', 'Целевая аудитория', 'Программа мероприятия',
                                       'Дополнительные элементы', 'Маркетинг и продвижение', 'Ожидаемые результаты'],

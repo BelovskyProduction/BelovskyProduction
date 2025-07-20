@@ -17,27 +17,15 @@ from service import save_survey_to_db, generate_survey_confirm_text, check_if_us
     get_user_registration_questions_number, unite_questions_and_answers, delete_tg_message, validate_answer, process_message, \
     save_user_to_db, save_event_order_to_db
 from utils import format_message
+from user_states import SurveyState
 
-router = Router()
+router = Router(name='conception_router')
 
 event_types = ['Свадьба', 'День рождения', 'Корпоратив', 'Конференция', 'Другое']
 
 user_data_map = {1: 'Имя', 2: 'Номер телефона'}
 
 #TODO: add handling when usere type text answer instead of click answer button, when user editing he can press edit button
-
-
-class SurveyState(StatesGroup):
-    chat_started = State()
-    choosing_event_type_for_order = State()
-    deciding_whether_to_generate_conception = State()
-    ready_to_survey = State()
-    survey_started = State()
-    survey_editing = State()
-    conception_generating = State()
-
-class AdvertisingStates(StatesGroup):
-    pass
 
 
 @router.message(Command('start'))
@@ -153,24 +141,6 @@ async def start_survey_handler(msg: Message, state: FSMContext, bot: Bot):
         await msg.answer(text=text.event_choose_message, reply_markup=menu.as_markup(), parse_mode='Markdown')
 
 
-@router.message(F.text == f'{chr(0x1F4E2)} Реклама')
-async def start_advertising_survey_handler(msg: Message, state: FSMContext, bot: Bot):
-    print(1)
-    await msg.delete()
-    current_state = await state.get_state()
-
-    if current_state in [SurveyState.ready_to_survey.state]:
-        data = await state.get_data()
-        print('here')
-        # if not await check_if_user_can_start_survey(data.get('user_id')):
-        #     return await msg.answer(text=text.surveys_limit_reached)
-        #
-        # await state.set_state(SurveyState.survey_started)
-        # events = [event for event in event_types if event != 'Другое']
-        # menu = generate_event_type_menu(events)
-        # await msg.answer(text=text.event_choose_message, reply_markup=menu.as_markup(), parse_mode='Markdown')
-
-
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('event_'))
 async def survey_event_type_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
@@ -205,6 +175,7 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
         await state.update_data(last_question_number=current_question_number, survey_answers=survey_answers,
                                 message_to_delete=question_message_id)
     else:
+        # TODO: add confirmation state, because now, after confirmation send this hanlder still process text and changes last answer
         await state.update_data(survey_answers=survey_answers)
         questions = get_survey_questions(event_type, without_question_data=True)
         message = generate_survey_confirm_text(questions, survey_answers)

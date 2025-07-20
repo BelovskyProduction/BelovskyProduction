@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.mongo import MongoStorage
 
 from config import BOT_TOKEN, MONGO_URL, MONGO_DB_NAME
-from handlers import router
+from routers import base_router
 from service import clear_pending_conception_generation
 
 
@@ -17,7 +17,7 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     storage = get_mongo_storage()
     dp = Dispatcher(storage=storage)
-    dp.include_router(router)
+    dp.include_router(base_router)
     await clear_pending_conception_generation(bot)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
