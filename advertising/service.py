@@ -52,3 +52,11 @@ async def validate_answer(chat_id: int, question_number: int | str, answer: str,
         error_message = await bot.send_message(chat_id=chat_id, text=error_message)
         await state.update_data(message_to_delete=error_message.message_id)
     return validated
+
+
+def get_survey_questions(without_question_data=False):
+    # TODO: unite with similar method from service
+    questions = ADVERTISING_QUESTIONS.copy()
+    if without_question_data:
+        questions = {q_number: q_data.get('question') for q_number, q_data in questions.items()}
+    return questions

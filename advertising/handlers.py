@@ -7,9 +7,9 @@ from aiogram import F
 
 import text
 from user_states import AdvertisingStates, SurveyState
-from utils import process_message, delete_tg_message
+from utils import process_message, delete_tg_message, unite_questions_and_answers
 
-from .service import send_next_question, validate_answer, get_advertising_survey_question_number
+from .service import send_next_question, validate_answer, get_advertising_survey_question_number, get_survey_questions
 
 advertising_router = Router(name='advertising_router')
 
@@ -55,7 +55,8 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
         await state.update_data(last_question_number=current_question_number, advertising_survey_answers=survey_answers,
                                 message_to_delete=question_message_id)
     else:
-        await state.update_data(advertising_survey_answers=survey_answers)
+        await state.update_data(advertising_survey_answers=survey_answers, advertise_survey_passed=True)
         await state.set_state(SurveyState.ready_to_survey)
-        await state.update_data(advertise_survey_passed=True)
         await bot.send_message(chat_id=chat_id, text=text.advertising_survey_passed)
+        questions = get_survey_questions(without_question_data=True)
+        united_answers = unite_questions_and_answers(questions, survey_answers)

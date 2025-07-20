@@ -48,3 +48,10 @@ async def process_message(message: Message | CallbackQuery, bot: Bot) -> tuple[s
         answer = message.data.split('_')[-1]
         chat_id = message.message.chat.id
     return answer, chat_id
+
+
+def unite_questions_and_answers(questions, answers):
+    united_answers = {}
+    for question, answer in zip(questions.values(), answers.values()):
+        united_answers.update({question: answer})
+    return united_answers

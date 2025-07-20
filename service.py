@@ -18,7 +18,7 @@ from datetime import datetime
 from config import REGISTRATION_QUESTIONS, SURVEY_QUESTIONS, CONCEPTION_CONTENT
 from keyboard import generate_question_answer_menu, main_menu
 from validator import AnswerValidator
-from utils import get_open_ai_client
+from utils import get_open_ai_client, unite_questions_and_answers
 
 
 logger = logging.getLogger()
@@ -103,13 +103,6 @@ def generate_survey_confirm_text(questions, survey_answers):
         for question_number, question in questions.items()
     )
     return message
-
-
-def unite_questions_and_answers(questions, answers):
-    united_answers = {}
-    for question, answer in zip(questions.values(), answers.values()):
-        united_answers.update({question: answer})
-    return united_answers
 
 
 async def save_to_db(collection: Collection, data: dict) -> InsertOneResult:
