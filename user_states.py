@@ -2,7 +2,7 @@ from aiogram.fsm.state import StatesGroup, State
 
 
 class AdvertisingStates(StatesGroup):
-    pass
+    advertising_survey_started = State()
 
 
 class SurveyState(StatesGroup):

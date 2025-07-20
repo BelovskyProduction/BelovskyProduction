@@ -8,7 +8,6 @@ from bson import ObjectId
 from aiogram import Bot, md
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
 from openai import AsyncOpenAI, OpenAIError
 from pymongo.results import InsertOneResult
 from pymongo.synchronous.collection import Collection
@@ -225,20 +224,6 @@ async def clear_pending_conception_generation(bot):
     logger.info('Clearing finished')
 
 
-async def delete_tg_message(chat_id: int | str, message_id: int, bot: Bot):
-    """
-    Safely delete tg message
-    :param chat_id: telegram chat id
-    :param message_id: message id in chat
-    :param bot: aiogram bot instance
-    :return: None
-    """
-    try:
-        await bot.delete_message(chat_id=chat_id, message_id=message_id)
-    except TelegramBadRequest as e:
-        logger.warning(f"failed to delete message: {e.message}")
-
-
 async def validate_answer(chat_id: int, question_number: int | str, answer: str, state: FSMContext, bot: Bot,
                           event_type: str | None = None) -> bool:
     """
@@ -257,20 +242,3 @@ async def validate_answer(chat_id: int, question_number: int | str, answer: str,
         error_message = await bot.send_message(chat_id=chat_id, text=error_message)
         await state.update_data(message_to_delete=error_message.message_id)
     return validated
-
-
-async def process_message(message: Message | CallbackQuery, bot: Bot) -> tuple[str, int]:
-    """
-    Processes user message to receive answer to question. If message type is Aiogram.Message than also deleting it from chat
-    :param message: User message
-    :param bot: Aiogram bot instance
-    :return: chat id and answer
-    """
-    if isinstance(message, Message):
-        answer = message.text
-        chat_id = message.chat.id
-        await delete_tg_message(chat_id=chat_id, message_id=message.message_id, bot=bot)
-    else:
-        answer = message.data.split('_')[-1]
-        chat_id = message.message.chat.id
-    return answer, chat_id

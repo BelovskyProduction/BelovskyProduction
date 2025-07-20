@@ -3,7 +3,6 @@ import os
 from aiogram import Router, Bot
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram import F
 from pymongo.errors import PyMongoError
@@ -14,9 +13,9 @@ from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, 
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
     send_next_question, get_event_conception, format_conception, get_next_user_registration_question, \
-    get_user_registration_questions_number, unite_questions_and_answers, delete_tg_message, validate_answer, process_message, \
+    get_user_registration_questions_number, unite_questions_and_answers, validate_answer, \
     save_user_to_db, save_event_order_to_db
-from utils import format_message
+from utils import format_message, delete_tg_message, process_message
 from user_states import SurveyState
 
 router = Router(name='conception_router')
