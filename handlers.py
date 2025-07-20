@@ -29,10 +29,15 @@ user_data_map = {1: 'Имя', 2: 'Номер телефона'}
 
 class SurveyState(StatesGroup):
     chat_started = State()
+    choosing_event_type_for_order = State()
+    deciding_whether_to_generate_conception = State()
     ready_to_survey = State()
     survey_started = State()
     survey_editing = State()
     conception_generating = State()
+
+class AdvertisingStates(StatesGroup):
+    pass
 
 
 @router.message(Command('start'))
@@ -75,13 +80,14 @@ async def registration_question_answer_handler(msg: Message, state: FSMContext, 
         try:
             user_id = await save_user_to_db({'telegram_id': msg.from_user.id, **user_data})
             await state.update_data(user_id=user_id)
+            await state.set_state(SurveyState.choosing_event_type_for_order)
             menu = generate_event_type_menu(event_types)
             await msg.answer(text=text.event_choose_message, reply_markup=menu.as_markup(), parse_mode='Markdown')
         except PyMongoError:
             await msg.answer(text=text.answer_default_message)
 
 
-@router.callback_query(StateFilter(SurveyState.chat_started), F.data.startswith('event_'))
+@router.callback_query(StateFilter(SurveyState.choosing_event_type_for_order), F.data.startswith('event_'))
 async def order_event_type_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
 
@@ -101,13 +107,15 @@ async def order_event_type_handler(callback: CallbackQuery, state: FSMContext, b
     await notify_admin_about_new_client(user_data, bot)
 
     if event_type.lower() == 'другое':
-        await bot.send_message(chat_id=callback.message.chat.id, text=text.other_event_reply)
+        await state.set_state(SurveyState.ready_to_survey)
+        await bot.send_message(chat_id=callback.message.chat.id, text=text.other_event_reply, reply_markup=main_menu)
     else:
+        await state.set_state(SurveyState.deciding_whether_to_generate_conception)
         await bot.send_message(chat_id=callback.message.chat.id, text=text.event_survey_start_question,
                                reply_markup=survey_request_menu)
 
 
-@router.callback_query(StateFilter(SurveyState.chat_started), F.data.startswith('surveyrequest'))
+@router.callback_query(StateFilter(SurveyState.deciding_whether_to_generate_conception), F.data.startswith('surveyrequest'))
 async def survey_request_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.delete()
     want_to_start_survey = callback.data.split('_')[-1]
@@ -125,7 +133,8 @@ async def survey_request_handler(callback: CallbackQuery, state: FSMContext, bot
         await state.update_data(last_question_number=question_number, survey_answers={},
                                 message_to_delete=question_message_id)
     else:
-        await bot.send_message(chat_id=chat_id, text=text.user_dont_want_survey)
+        await state.set_state(SurveyState.ready_to_survey)
+        await bot.send_message(chat_id=chat_id, text=text.user_dont_want_survey, reply_markup=main_menu)
 
 
 @router.message(F.text == f'{chr(0x1F4CB)} Опрос')
@@ -142,6 +151,24 @@ async def start_survey_handler(msg: Message, state: FSMContext, bot: Bot):
         events = [event for event in event_types if event != 'Другое']
         menu = generate_event_type_menu(events)
         await msg.answer(text=text.event_choose_message, reply_markup=menu.as_markup(), parse_mode='Markdown')
+
+
+@router.message(F.text == f'{chr(0x1F4E2)} Реклама')
+async def start_advertising_survey_handler(msg: Message, state: FSMContext, bot: Bot):
+    print(1)
+    await msg.delete()
+    current_state = await state.get_state()
+
+    if current_state in [SurveyState.ready_to_survey.state]:
+        data = await state.get_data()
+        print('here')
+        # if not await check_if_user_can_start_survey(data.get('user_id')):
+        #     return await msg.answer(text=text.surveys_limit_reached)
+        #
+        # await state.set_state(SurveyState.survey_started)
+        # events = [event for event in event_types if event != 'Другое']
+        # menu = generate_event_type_menu(events)
+        # await msg.answer(text=text.event_choose_message, reply_markup=menu.as_markup(), parse_mode='Markdown')
 
 
 @router.callback_query(StateFilter(SurveyState.survey_started), F.data.startswith('event_'))

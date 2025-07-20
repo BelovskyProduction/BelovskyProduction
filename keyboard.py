@@ -1,7 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-main_menu_buttons = [[KeyboardButton(text=f'{chr(0x1F4CB)} Опрос')]]
+main_menu_buttons = [[KeyboardButton(text=f'{chr(0x1F4CB)} Опрос')], [KeyboardButton(text=f'{chr(0x1F4E2)} Реклама')]]
 
 main_menu = ReplyKeyboardMarkup(keyboard=main_menu_buttons, resize_keyboard=True, one_time_keyboard=False, row_width=2)
 
