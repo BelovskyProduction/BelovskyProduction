@@ -8,11 +8,13 @@ from aiogram import F
 from pymongo.errors import PyMongoError
 
 import text
+from llm.prompt_builders import EventPromptBuilder
+from llm.service import get_conception
 from keyboard import main_menu, survey_confirm_menu, generate_survey_edit_menu, generate_event_type_menu,\
     survey_request_menu
 from service import save_survey_to_db, generate_survey_confirm_text, check_if_user_can_start_survey, \
     notify_admin_about_new_client, get_survey_question_number, get_survey_questions, \
-    send_next_question, get_event_conception, format_conception, get_next_user_registration_question, \
+    send_next_question, format_conception, get_next_user_registration_question, \
     get_user_registration_questions_number, validate_answer, \
     save_user_to_db, save_event_order_to_db
 from utils import format_message, delete_tg_message, process_message, unite_questions_and_answers
@@ -195,7 +197,8 @@ async def survey_finish_handler(callback: CallbackQuery, state: FSMContext, bot:
     await bot.send_message(chat_id=chat_id, text=text.survey_finished_message)
     united_answers = unite_questions_and_answers(questions, survey_answers)
     await state.set_state(SurveyState.conception_generating)
-    conception = await get_event_conception(event_type, united_answers, int(os.getenv('MAX_RETRIES', 2)))
+    prompt_builder = EventPromptBuilder(event_type)
+    conception = await get_conception(prompt_builder, united_answers, int(os.getenv('MAX_RETRIES', 2)))
     await state.set_state(SurveyState.ready_to_survey)
     if not conception:
         return await bot.send_message(chat_id=chat_id, text=text.conception_error, reply_markup=main_menu)

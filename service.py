@@ -1,4 +1,3 @@
-import asyncio
 import os
 import logging
 import json
@@ -7,7 +6,6 @@ from bson import ObjectId
 from aiogram import Bot, md
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from openai import OpenAIError
 from pymongo.results import InsertOneResult
 from pymongo.synchronous.collection import Collection
 
@@ -18,21 +16,10 @@ from datetime import datetime
 from config import REGISTRATION_QUESTIONS, SURVEY_QUESTIONS, CONCEPTION_CONTENT
 from keyboard import generate_question_answer_menu, main_menu
 from validator import AnswerValidator
-from utils import get_open_ai_client, unite_questions_and_answers
+from utils import unite_questions_and_answers
 
 
 logger = logging.getLogger()
-
-
-def get_prompt(event_type, survey_answers):
-    user_content = f"Сгенерируй концепцию для мероприятия типа: '{event_type}' на основе следующих ответов: {survey_answers}. " \
-                   f"Ответ должен содержать только следующие пункты: {CONCEPTION_CONTENT.get(event_type)}. " \
-                   f"Значение пунктов должно быть в виде текста"
-    prompt = {'model': os.getenv('LLM_MODEL'), 'response_format': {'type': 'json_object'}}
-    messages = [{'role': "system", "content": "You are a helpful assistant. You response in JSON format"},
-                {'role': 'user', "content": user_content}]
-    prompt.update({'messages': messages})
-    return prompt
 
 
 def clean_json_block(json_block: str):
@@ -59,24 +46,6 @@ async def format_conception(conception: str, event_type: str) -> (str, dict):
     except Exception as e:
         logger.error('Conception format error: %s', e.args)
         return conception, conception
-
-
-async def get_event_conception(event_type, survey_answers, retries):
-    delay_in_seconds = int(os.getenv('RETRY_DELAY_MINUTES', 2)) * 60
-    while retries > 0:
-        try:
-            return await generate_event_conception(event_type, survey_answers)
-        except OpenAIError as e:
-            logger.error('Conception generation error: %s', e.args)
-            await asyncio.sleep(delay_in_seconds)
-            retries -= 1
-
-
-async def generate_event_conception(event_type, survey_answers):
-    gpt_client = get_open_ai_client()
-    prompt = get_prompt(event_type, survey_answers)
-    completion = await gpt_client.chat.completions.create(**prompt)
-    return completion.choices[0].message.content
 
 
 async def notify_admin_about_new_client(user_data, bot: Bot):
