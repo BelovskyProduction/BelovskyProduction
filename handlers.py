@@ -45,7 +45,7 @@ async def start_handler(msg: Message, state: FSMContext):
 
 
 @router.message(Command('menu'))
-async def start_handler(msg: Message, state: FSMContext):
+async def menu_handler(msg: Message, state: FSMContext):
     current_state = await state.get_state()
 
     if current_state:
