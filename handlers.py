@@ -44,6 +44,14 @@ async def start_handler(msg: Message, state: FSMContext):
                                 message_to_delete=send_question.message_id)
 
 
+@router.message(Command('menu'))
+async def start_handler(msg: Message, state: FSMContext):
+    current_state = await state.get_state()
+
+    if current_state:
+        await msg.answer('Меню обновлено', reply_markup=main_menu)
+
+
 @router.message(StateFilter(SurveyState.chat_started.state))
 async def registration_question_answer_handler(msg: Message, state: FSMContext, bot: Bot):
     answer = msg.text
