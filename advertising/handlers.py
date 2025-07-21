@@ -1,3 +1,5 @@
+import os
+
 from aiogram import Bot
 from aiogram.dispatcher.router import Router
 from aiogram.filters import StateFilter
@@ -6,10 +8,13 @@ from aiogram.types import Message, CallbackQuery
 from aiogram import F
 
 import text
+from llm.prompt_builders import AdvertisingPromptBuilder
+from llm.service import get_conception
 from user_states import AdvertisingStates, SurveyState
 from utils import process_message, delete_tg_message, unite_questions_and_answers
 
-from .service import send_next_question, validate_answer, get_advertising_survey_question_number, get_survey_questions
+from .service import send_next_question, validate_answer, get_advertising_survey_question_number, get_survey_questions, \
+    save_advertising_survey_to_db
 
 advertising_router = Router(name='advertising_router')
 
@@ -22,8 +27,8 @@ async def start_advertising_survey_handler(msg: Message, state: FSMContext, bot:
     if current_state in [SurveyState.ready_to_survey.state]:
         chat_id = msg.chat.id
         data = await state.get_data()
-        if data.get('advertise_survey_passed'):
-            return await msg.answer(text=text.advertising_survey_already_passed)
+        # if data.get('advertise_survey_passed'):
+        #     return await msg.answer(text=text.advertising_survey_already_passed)
 
         await state.set_state(AdvertisingStates.advertising_survey_started)
         starting_question_number = 1
@@ -60,3 +65,6 @@ async def survey_question_answer_handler(msg: Message | CallbackQuery, state: FS
         await bot.send_message(chat_id=chat_id, text=text.advertising_survey_passed)
         questions = get_survey_questions(without_question_data=True)
         united_answers = unite_questions_and_answers(questions, survey_answers)
+        prompt_builder = AdvertisingPromptBuilder()
+        conception = await get_conception(prompt_builder, united_answers, int(os.getenv('MAX_RETRIES', 2)))
+        await save_advertising_survey_to_db(state_data.get('user_id'), united_answers, conception)

@@ -10,6 +10,7 @@ SURVEYS = 'surveys'
 USERS = 'users'
 EVENT_ORDERS = 'event_orders'
 STATE_DATA = 'states_and_data'
+ADVERTISING = 'advertising'
 
 
 def get_collection(collection_name):

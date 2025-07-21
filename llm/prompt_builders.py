@@ -37,3 +37,10 @@ class EventPromptBuilder(ConceptionPromptBuilder):
                        f"Значение пунктов должно быть в виде текста"
         return self.construct_prompt(user_content)
 
+
+class AdvertisingPromptBuilder(ConceptionPromptBuilder):
+
+    def build_prompt(self, survey_answers: dict) -> dict:
+        user_content = f"Сгенерируй рекламный видеоролик на основе следующих ответов: {survey_answers}. " \
+                       f"Распиши его по пунктам."
+        return self.construct_prompt(user_content)

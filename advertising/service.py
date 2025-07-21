@@ -1,9 +1,17 @@
+import json
+import logging
+from datetime import datetime
+
 from aiogram import Bot
 from aiogram.fsm.context import FSMContext
+from bson import ObjectId
 
 from config import ADVERTISING_QUESTIONS
+from database import ADVERTISING, get_collection
 from keyboard import generate_question_answer_menu
 from validator import AnswerValidator
+
+logger = logging.getLogger()
 
 
 def get_advertising_survey_question_number():
@@ -60,3 +68,31 @@ def get_survey_questions(without_question_data=False):
     if without_question_data:
         questions = {q_number: q_data.get('question') for q_number, q_data in questions.items()}
     return questions
+
+
+async def save_advertising_survey_to_db(user_id: ObjectId, questions_and_answers: dict, conception: dict):
+    collection = get_collection(ADVERTISING)
+    current_date = datetime.now().strftime('%d %b %Y %H:%M:%S')
+    conception = await format_conception(conception)
+    data = {'user_id': user_id, 'answers': questions_and_answers, 'conception': conception, 'created_at': current_date}
+    collection.insert_one(data)
+
+
+def clean_json_block(json_block: str):
+    if json_block.startswith("```") and json_block.endswith("```"):
+        return json_block.strip("`")
+    return json_block
+
+
+async def format_conception(conception: str) -> (str, dict):
+    try:
+        conception = clean_json_block(conception)
+        json_conception = json.loads(conception)
+        return json_conception
+
+    except json.JSONDecodeError as e:
+        logger.error('Conception format error: %s', e.args)
+        return conception, conception
+    except Exception as e:
+        logger.error('Conception format error: %s', e.args)
+        return conception, conception
